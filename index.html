@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Texas Hedge'Em — Coming Soon</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0a0f0a;
+      color: #f0f0f0;
+      font-family: Georgia, serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background-image:
+        radial-gradient(ellipse at top, #0d2b0d 0%, #0a0f0a 60%);
+    }
+
+    .suit {
+      font-size: 2rem;
+      letter-spacing: 0.5rem;
+      color: #2d6a2d;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 6vw, 4rem);
+      color: #f5c518;
+      text-shadow: 0 0 30px rgba(245, 197, 24, 0.4);
+      letter-spacing: 0.05em;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .tagline {
+      font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+      color: #8ab88a;
+      text-align: center;
+      margin-bottom: 3rem;
+      font-style: italic;
+    }
+
+    .coming-soon {
+      font-size: clamp(1rem, 3vw, 1.5rem);
+      color: #f0f0f0;
+      text-align: center;
+      margin-bottom: 2.5rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+
+    .video-wrapper {
+      width: 100%;
+      max-width: 720px;
+      aspect-ratio: 16 / 9;
+      border: 2px solid #2d6a2d;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(22, 163, 74, 0.2);
+      margin-bottom: 2.5rem;
+    }
+
+    .video-wrapper iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .cta {
+      font-size: 0.9rem;
+      color: #8ab88a;
+      text-align: center;
+    }
+
+    .cta a {
+      color: #f5c518;
+      text-decoration: none;
+    }
+
+    .cta a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 1rem;
+      font-size: 0.75rem;
+      color: #3a4f3a;
+    }
+  </style>
+</head>
+<body>
+  <div class="suit">♠ ♥ ♦ ♣</div>
+  <h1>Texas Hedge'Em</h1>
+  <p class="tagline">Player vs House — the poker odds game</p>
+  <p class="coming-soon">Something big is coming</p>
+
+  <div class="video-wrapper">
+    <iframe
+      src="https://www.youtube.com/embed/29qPXUKwmUc?rel=0"
+      title="Texas Hedge'Em promo"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <p class="cta">
+    Want to know more? <a href="https://docs.qeetoto.com" target="_blank" rel="noopener">docs.qeetoto.com</a>
+  </p>
+
+  <footer>Qeetoto Limited &mdash; All rights reserved</footer>
+</body>
+</html>
