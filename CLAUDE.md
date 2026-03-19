@@ -52,8 +52,9 @@ Planning and early development phase. Three prior versions being revived and ana
 ## Current Focus
 
 **Next: HEDGE-30** — Port Phase 1 (utility methods: card shuffler, chip denominations, hand descriptions)
-Last done: HEDGE-28 (Mintlify docs + OpenAPI spec, committed 2026-03-19)
-Simon actions pending: update $JIRA_TOKEN in ~/.zshrc; manually mark HEDGE-27 + HEDGE-28 Done in Jira; provide SQLite DB (HEDGE-29); connect Mintlify to docs.qeetoto.com.
+Last done: HEDGE-28 (Mintlify docs + OpenAPI spec — live at https://hedgeem-api.qeetoto.com)
+Simon actions pending: provide SQLite DB (HEDGE-29); connect Mintlify to docs.qeetoto.com (custom domain in dashboard).
+Mintlify: dashboard.mintlify.com/qeetoto/qeetoto — monorepo path: mintlify-docs/
 
 ## Claude Behaviour Standards
 

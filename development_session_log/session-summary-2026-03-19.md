@@ -5,7 +5,7 @@
 
 ## Session Overview
 
-Short session (19 Mar 2026) to execute HEDGE-27 — the Node.js/Express/TypeScript REST API project scaffold. Picked up directly from the 17–18 Mar session log. All 6 game endpoints plus health check are now scaffolded, typed, and TypeScript-clean.
+Session (19 Mar 2026) covering HEDGE-27 (API scaffold), HEDGE-28 (Mintlify docs), global memory/workflow fixes, and Mintlify deployment debugging. Mintlify confirmed live at https://hedgeem-api.qeetoto.com.
 
 ---
 
@@ -88,8 +88,29 @@ $JIRA_TOKEN still needs updating in `~/.zshrc` — Jira calls returning 403. HED
 
 ---
 
+## Mintlify Deployment (completed 19 Mar 2026)
+
+- Dashboard: https://dashboard.mintlify.com/qeetoto/qeetoto
+- Live URL: https://hedgeem-api.qeetoto.com
+- Repo: texashedgeem/hedgeem-v5, branch: main
+- Docs folder (monorepo path): `mintlify-docs/`
+- Key fixes needed during deployment:
+  - docs/ renamed to mintlify-docs/
+  - mint.json renamed to docs.json (Mintlify v2 requirement)
+  - $schema: https://mintlify.com/docs.json (not schema.json)
+  - navigation must be object with tabs/groups (not array)
+  - footer.socials (not footerSocials)
+  - theme field required (used "maple")
+  - Commits must be pushed to GitHub before Mintlify can see them
+
+## Global Fixes Applied (19 Mar 2026)
+
+- Session start auto-brief: Current Focus now in CLAUDE.md + MEMORY.md for all 12 projects
+- Test-before-closing rule: ask Simon to test before any Jira ticket → Done (all 12 projects)
+- Jira auth: Basic auth (curl -u email:$JIRA_TOKEN), NOT Bearer token
+
 ## Next Session Start Prompt
 
-**Ready to start HEDGE-28 (Mintlify documentation)?**
+**Ready to start HEDGE-30 (Port Phase 1 — utility methods)?**
 
-Design the full OpenAPI spec for all 6 game endpoints. Publish to docs.qeetoto.com via Mintlify. All endpoints are scaffolded and ready to document.
+Card shuffler, chip denominations, hand descriptions. First real implementation — no DB dependency, fully implementable.
