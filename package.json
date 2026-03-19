@@ -1,0 +1,19 @@
+{
+  "name": "hedgeem-v5",
+  "version": "0.1.0",
+  "description": "Texas Hedge'Em v5 — Node.js/Express/TypeScript REST API (Vercel serverless)",
+  "private": true,
+  "scripts": {
+    "build": "tsc --project api/tsconfig.json",
+    "lint": "tsc --project api/tsconfig.json --noEmit",
+    "test": "echo \"No tests yet — see HEDGE-37\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.78.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vercel/node": "^5.6.11",
+    "typescript": "^5.4.0"
+  }
+}
