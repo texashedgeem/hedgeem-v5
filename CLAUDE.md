@@ -61,5 +61,6 @@ Simon actions pending: update $JIRA_TOKEN in ~/.zshrc; manually mark HEDGE-27 + 
 - Show Jira preview before creating/updating tickets
 - Add Jira comments at: start of work, description enhancement, Done transition
 - Never delete descriptions — only update or append
+- Before closing any ticket: ask Simon if he wants to test first; capture response/evidence as a Jira comment before transitioning to Done
 - $JIRA_TOKEN = open-banking.atlassian.net — do NOT use $JIRA_ZODIA here
 - Always Edit files — never Write/overwrite
