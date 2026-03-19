@@ -7,7 +7,6 @@
     "light": "#d97706",
     "dark": "#92400e"
   },
-  "favicon": "/favicon.png",
   "navigation": {
     "tabs": [
       {
@@ -58,5 +57,10 @@
     "socials": {
       "github": "https://github.com/texashedgeem/hedgeem-v5"
     }
+  },
+  "favicon": "/images/loading.jpg",
+  "logo": "/images/gamblewheel.png",
+  "appearance": {
+    "default": "dark"
   }
 }
