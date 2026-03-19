@@ -1,5 +1,5 @@
 {
-  "$schema": "https://mintlify.com/schema.json",
+  "$schema": "https://mintlify.com/docs.json",
   "name": "HedgeEm API",
   "theme": "maple",
   "colors": {
@@ -8,40 +8,55 @@
     "dark": "#92400e"
   },
   "favicon": "/favicon.png",
-  "navigation": [
-    {
-      "group": "Get Started",
-      "pages": ["introduction", "quickstart", "authentication"]
-    },
-    {
-      "group": "Concepts",
-      "pages": ["concepts/game-states", "concepts/card-notation"]
-    },
-    {
-      "group": "API Reference",
-      "pages": [
-        "api-reference/health",
-        {
-          "group": "Tables",
-          "pages": [
-            "api-reference/tables/state",
-            "api-reference/tables/advance",
-            "api-reference/tables/bet",
-            "api-reference/tables/topup",
-            "api-reference/tables/sit"
-          ]
-        },
-        {
-          "group": "Players",
-          "pages": [
-            "api-reference/players/get-player"
-          ]
-        }
-      ]
-    }
-  ],
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Get Started",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "authentication"]
+          }
+        ]
+      },
+      {
+        "tab": "Concepts",
+        "groups": [
+          {
+            "group": "Concepts",
+            "pages": ["concepts/game-states", "concepts/card-notation"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "System",
+            "pages": ["api-reference/health"]
+          },
+          {
+            "group": "Tables",
+            "pages": [
+              "api-reference/tables/state",
+              "api-reference/tables/advance",
+              "api-reference/tables/bet",
+              "api-reference/tables/topup",
+              "api-reference/tables/sit"
+            ]
+          },
+          {
+            "group": "Players",
+            "pages": ["api-reference/players/get-player"]
+          }
+        ]
+      }
+    ]
+  },
   "openapi": "openapi.yaml",
-  "footerSocials": {
-    "github": "https://github.com/texashedgeem/hedgeem-v5"
+  "footer": {
+    "socials": {
+      "github": "https://github.com/texashedgeem/hedgeem-v5"
+    }
   }
 }
