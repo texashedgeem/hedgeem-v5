@@ -49,10 +49,17 @@ Planning and early development phase. Three prior versions being revived and ana
 | HEDGE-23 | Create Supabase project and run initial migrations |
 | HEDGE-24 | Implement Supabase auth and game session persistence |
 
+## Current Focus
+
+**Next: HEDGE-28** — Mintlify documentation for HedgeEm v5 REST API
+Last done: HEDGE-27 (Node.js/TypeScript REST API scaffold, committed 2026-03-19)
+Simon actions pending: update $JIRA_TOKEN in ~/.zshrc; manually mark HEDGE-27 Done in Jira; provide SQLite DB (HEDGE-29).
+
 ## Claude Behaviour Standards
 
-- Auto-brief at session start: last worked on, completed, next step, In Progress HEDGE tickets
+- **Session start**: Read this "Current Focus" section and MEMORY.md. Announce next action. List In Progress HEDGE tickets. Ask Simon if he wants to continue. Do this before anything else, without being asked.
 - Show Jira preview before creating/updating tickets
 - Add Jira comments at: start of work, description enhancement, Done transition
 - Never delete descriptions — only update or append
 - $JIRA_TOKEN = open-banking.atlassian.net — do NOT use $JIRA_ZODIA here
+- Always Edit files — never Write/overwrite
