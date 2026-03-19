@@ -1,0 +1,54 @@
+---
+title: Introduction
+description: Texas Hedge'Em v5 REST API — place your bets on the odds.
+---
+
+## What is Texas Hedge'Em?
+
+Texas Hedge'Em is a player-vs-house casino poker game. Unlike traditional poker,
+players don't compete against each other — they bet on the odds of **four simultaneous
+poker hands** winning against each other.
+
+Each game progresses through three betting stages:
+
+| Stage | Cards Dealt | Action |
+|-------|-------------|--------|
+| **Hole** | 2 cards per hand | Place bets based on hole card odds |
+| **Flop** | 3 community cards | Re-assess and place flop bets |
+| **Turn** | 1 community card | Final betting round |
+| **River** | 1 community card | Outcome revealed, winners paid |
+
+## The API
+
+The HedgeEm API powers the `gameClient` — the Phaser 3 game client in this repo.
+It is a Node.js/TypeScript serverless API deployed to Vercel.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Make your first API call in under 5 minutes
+  </Card>
+  <Card title="Authentication" icon="lock" href="/authentication">
+    How to authenticate using Supabase JWTs
+  </Card>
+  <Card title="Game States" icon="chart-line" href="/concepts/game-states">
+    Understand the game lifecycle and state machine
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/health">
+    Full endpoint documentation
+  </Card>
+</CardGroup>
+
+## API Status
+
+<Warning>
+  This API is currently in **stub mode**. All endpoints return realistic dummy data.
+  Real game logic and Supabase persistence will be wired up incrementally per the HEDGE roadmap.
+</Warning>
+
+| Endpoint group | Status |
+|---|---|
+| Health | ✅ Live |
+| Tables — state, advance | 🔧 Stub |
+| Tables — bet, topup, sit | 🔧 Stub |
+| Players | 🔧 Stub |
+| Auth (Supabase JWT) | 🔧 Stub — HEDGE-31 |

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "HedgeEm API",
+  "colors": {
+    "primary": "#b45309",
+    "light": "#d97706",
+    "dark": "#92400e"
+  },
+  "favicon": "/favicon.png",
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": ["introduction", "quickstart", "authentication"]
+    },
+    {
+      "group": "Concepts",
+      "pages": ["concepts/game-states", "concepts/card-notation"]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/health",
+        {
+          "group": "Tables",
+          "pages": [
+            "api-reference/tables/state",
+            "api-reference/tables/advance",
+            "api-reference/tables/bet",
+            "api-reference/tables/topup",
+            "api-reference/tables/sit"
+          ]
+        },
+        {
+          "group": "Players",
+          "pages": [
+            "api-reference/players/get-player"
+          ]
+        }
+      ]
+    }
+  ],
+  "openapi": "openapi.yaml",
+  "footerSocials": {
+    "github": "https://github.com/texashedgeem/hedgeem-v5"
+  }
+}

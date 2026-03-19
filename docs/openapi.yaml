@@ -1,0 +1,672 @@
+openapi: 3.0.0
+info:
+  title: Texas Hedge'Em API
+  version: "0.1.0"
+  description: |
+    REST API for Texas Hedge'Em v5 — a player-vs-house poker odds game.
+
+    Players place bets on the odds of multiple simultaneous poker hands
+    at three betting stages: **Hole**, **Flop**, and **Turn**.
+    The River card determines the winning hand and pays out winners.
+
+    **Base URL:** `https://hedgeem-v5.qeetoto.com`
+
+    **Authentication:** All endpoints except `/api/health` require a
+    Supabase JWT passed as a Bearer token in the `Authorization` header.
+    See [Authentication](/authentication) for details.
+
+    > **Note:** This API is currently in stub mode. Endpoints return
+    > realistic dummy data until Supabase and the game engine are wired up.
+  contact:
+    url: https://github.com/texashedgeem/hedgeem-v5
+  license:
+    name: MIT
+
+servers:
+  - url: https://hedgeem-v5.qeetoto.com
+    description: Production (Vercel)
+  - url: http://localhost:3000
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /api/health:
+    get:
+      summary: Health check
+      description: Returns the API status and version. No authentication required.
+      operationId: getHealth
+      security: []
+      tags: [System]
+      responses:
+        "200":
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                service: hedgeem-api
+                version: 0.1.0
+                timestamp: "2026-03-19T10:00:00.000Z"
+
+  /api/tables/{tableId}/state:
+    get:
+      summary: Get game state
+      description: |
+        Returns the full current game state for a table, including:
+        - Current game state and betting stage
+        - All four hands (once dealt)
+        - Community cards (flop, turn, river) as they are revealed
+        - Per-hand odds panels for the current and previous stages
+        - All seats and their balances
+        - All bets placed in the current game
+
+        Equivalent to `get_game_state_object` in the legacy C# server.
+      operationId: getTableState
+      tags: [Tables]
+      parameters:
+        - $ref: '#/components/parameters/tableId'
+      responses:
+        "200":
+          description: Current game state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HedgeEmGameState'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tables/{tableId}/advance:
+    post:
+      summary: Advance game
+      description: |
+        Advances the game to the next stage:
+        - **Setup → Hole** — shuffles deck, deals two cards to each hand
+        - **Hole → Flop** — deals three community cards
+        - **Flop → Turn** — deals the turn card
+        - **Turn → River** — deals the river card, resolves winning hand, pays out bets
+        - **River → Setup** — clears the table for the next game
+
+        Odds are recalculated at each stage. Dead hands (cannot win) are marked.
+        Equivalent to `get_next_game_state_object` in the legacy C# server.
+      operationId: advanceGame
+      tags: [Tables]
+      parameters:
+        - $ref: '#/components/parameters/tableId'
+      responses:
+        "200":
+          description: Updated game state after advancing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HedgeEmGameState'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tables/{tableId}/bet:
+    post:
+      summary: Place a bet
+      description: |
+        Places a bet on a specific hand at the current betting stage.
+
+        Bets are only accepted when the game is in an active betting stage
+        (Hole, Flop, or Turn). The odds recorded at the time of the bet are
+        stored alongside it for payout calculation.
+
+        Equivalent to `ws_place_bet` in the legacy C# server.
+      operationId: placeBet
+      tags: [Tables]
+      parameters:
+        - $ref: '#/components/parameters/tableId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceBetRequest'
+            example:
+              playerId: "abc123"
+              seatIndex: 0
+              handIndex: 1
+              betAmount: 25.00
+      responses:
+        "200":
+          description: Bet acknowledgement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceBetResponse'
+              examples:
+                accepted:
+                  summary: Bet accepted
+                  value:
+                    acknowledgement: ACK
+                    message: Bet placed successfully.
+                    updatedSeatBalance: 475.00
+                rejected:
+                  summary: Bet rejected (hand is dead)
+                  value:
+                    acknowledgement: NACK
+                    message: Cannot place bet on a dead hand.
+                    updatedSeatBalance: 500.00
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tables/{tableId}/topup:
+    post:
+      summary: Top up chips
+      description: |
+        Transfers chips from the player's account balance to their seat balance.
+
+        Players can top up between games or between betting stages if their
+        seat balance is running low. Cannot exceed the player's account balance.
+
+        Equivalent to `ws_top_up_chips_at_table` in the legacy C# server.
+      operationId: topUpChips
+      tags: [Tables]
+      parameters:
+        - $ref: '#/components/parameters/tableId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopUpRequest'
+            example:
+              playerId: "abc123"
+              amount: 100.00
+      responses:
+        "200":
+          description: Top up acknowledgement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopUpResponse'
+              example:
+                acknowledgement: ACK
+                newSeatBalance: 600.00
+                newAccountBalance: 900.00
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tables/{tableId}/sit:
+    post:
+      summary: Sit at table
+      description: |
+        Seats a player at a table with a specified buy-in amount.
+        The buy-in is deducted from the player's account balance and
+        credited to their seat balance.
+
+        Equivalent to `ws_sit_at_table_new` in the legacy C# server.
+      operationId: sitAtTable
+      tags: [Tables]
+      parameters:
+        - $ref: '#/components/parameters/tableId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SitRequest'
+            example:
+              playerId: "abc123"
+              buyInAmount: 500.00
+      responses:
+        "200":
+          description: Seat assignment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SitResponse'
+              example:
+                acknowledgement: ACK
+                seatId: 1
+                seatBalance: 500.00
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/players/{playerId}:
+    get:
+      summary: Get player
+      description: |
+        Returns a player's profile, account balance, and personal table assignment.
+
+        Equivalent to `ws_get_player_account_balance` in the legacy C# server.
+      operationId: getPlayer
+      tags: [Players]
+      parameters:
+        - $ref: '#/components/parameters/playerId'
+      responses:
+        "200":
+          description: Player profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HedgeEmPlayer'
+              example:
+                playerId: "abc123"
+                username: "simon.hewins@gmail.com"
+                displayName: "Simon"
+                accountBalance: 1000.00
+                avatarImageUrl: "/avatars/user_square.jpg"
+                role: BASIC_USER
+                isActive: true
+                personalTableId: 1
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Auth JWT. Obtain via Supabase Auth sign-in.
+
+  parameters:
+    tableId:
+      name: tableId
+      in: path
+      required: true
+      description: Unique numeric table identifier
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    playerId:
+      name: playerId
+      in: path
+      required: true
+      description: Player UUID (from Supabase auth.users.id)
+      schema:
+        type: string
+        format: uuid
+        example: "abc123-def456"
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            error: "betAmount must be a positive number."
+
+    Unauthorized:
+      description: Missing or invalid Bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            error: "Missing or invalid Authorization header."
+
+  schemas:
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        service:
+          type: string
+          example: hedgeem-api
+        version:
+          type: string
+          example: "0.1.0"
+        timestamp:
+          type: string
+          format: date-time
+
+    HedgeEmGameState:
+      type: object
+      description: |
+        Full game state for a Texas Hedge'Em table at a point in time.
+        This is the primary object consumed by the game client (gameClient/).
+      properties:
+        tableId:
+          type: integer
+          example: 1
+        gameId:
+          type: string
+          example: "game-001"
+        gameState:
+          $ref: '#/components/schemas/GameState'
+        bettingStage:
+          $ref: '#/components/schemas/BettingStage'
+        numberOfHands:
+          type: integer
+          description: Number of simultaneous hands in play (typically 4)
+          example: 4
+        numberOfSeats:
+          type: integer
+          description: Total seat capacity at this table
+          example: 6
+        jackpotValue:
+          type: number
+          description: Current jackpot value in chips
+          example: 1250.00
+        hands:
+          type: array
+          description: |
+            The four hole card pairs as card strings (e.g. "AcKd").
+            Null before STATUS_HOLE. See [Card Notation](/concepts/card-notation).
+          items:
+            type: string
+            nullable: true
+          example: ["AcKd", "QsJs", "8h7c", "5d2c"]
+        flopCard1:
+          type: string
+          nullable: true
+          description: First community card. Null before STATUS_FLOP.
+          example: "Ah"
+        flopCard2:
+          type: string
+          nullable: true
+          example: "3s"
+        flopCard3:
+          type: string
+          nullable: true
+          example: "9d"
+        turnCard:
+          type: string
+          nullable: true
+          description: Turn card. Null before STATUS_TURN.
+          example: null
+        riverCard:
+          type: string
+          nullable: true
+          description: River card. Null before STATUS_RIVER.
+          example: null
+        seats:
+          type: array
+          items:
+            $ref: '#/components/schemas/HedgeEmSeat'
+        bets:
+          type: array
+          description: All bets placed in the current game
+          items:
+            $ref: '#/components/schemas/HedgeEmBet'
+        handOdds:
+          type: array
+          description: |
+            Odds panel data for each hand at each betting stage.
+            The game client uses this to render betting panels.
+          items:
+            $ref: '#/components/schemas/HedgeEmHandOdds'
+
+    HedgeEmSeat:
+      type: object
+      properties:
+        seatId:
+          type: integer
+          example: 1
+        playerId:
+          type: string
+          description: Supabase auth UUID
+          example: "abc123"
+        playerName:
+          type: string
+          example: "Simon"
+        seatBalance:
+          type: number
+          description: Chips currently at this seat
+          example: 500.00
+        avatarImageUrl:
+          type: string
+          example: "/avatars/user_square.jpg"
+
+    HedgeEmBet:
+      type: object
+      properties:
+        playerId:
+          type: string
+          example: "abc123"
+        bettingStage:
+          $ref: '#/components/schemas/BettingStage'
+        seatIndex:
+          type: integer
+          description: Zero-based seat index
+          example: 0
+        handIndex:
+          type: integer
+          description: Zero-based hand index (0–3)
+          minimum: 0
+          maximum: 3
+          example: 0
+        betAmount:
+          type: number
+          example: 50.00
+        recordedOdds:
+          type: number
+          description: The odds at the moment the bet was placed, used for payout
+          example: 1.6
+
+    HedgeEmHandOdds:
+      type: object
+      description: |
+        Odds panel data for a single hand at a single betting stage.
+        Used by the game client to render the 12 betting panels (4 hands × 3 stages).
+      properties:
+        handIndex:
+          type: integer
+          minimum: 0
+          maximum: 3
+          example: 0
+        bettingStage:
+          $ref: '#/components/schemas/BettingStage'
+        handStatus:
+          $ref: '#/components/schemas/HandStatus'
+        winPercentage:
+          type: number
+          description: Probability of this hand winning (0–100)
+          example: 62.4
+        drawPercentage:
+          type: number
+          description: Probability of a draw (0–100)
+          example: 2.1
+        odds:
+          type: number
+          description: |
+            Payout odds. A bet of X returns X × odds.
+            0.0 when the hand is Dead or in a non-betting stage.
+          example: 1.6
+
+    HedgeEmPlayer:
+      type: object
+      properties:
+        playerId:
+          type: string
+          description: Supabase auth UUID
+          example: "abc123"
+        username:
+          type: string
+          example: "simon.hewins@gmail.com"
+        displayName:
+          type: string
+          example: "Simon"
+        accountBalance:
+          type: number
+          description: Total chips in the player's account (not at any table)
+          example: 1000.00
+        avatarImageUrl:
+          type: string
+          example: "/avatars/user_square.jpg"
+        role:
+          type: string
+          enum: [UNSPECIFIED_DUE_TO_ERROR, BASIC_USER, PAYING_USER, ANON_USER, ADMIN]
+          example: BASIC_USER
+        isActive:
+          type: boolean
+          example: true
+        personalTableId:
+          type: integer
+          nullable: true
+          description: The player's personal table ID, if they have one
+          example: 1
+
+    PlaceBetRequest:
+      type: object
+      required: [playerId, seatIndex, handIndex, betAmount]
+      properties:
+        playerId:
+          type: string
+          example: "abc123"
+        seatIndex:
+          type: integer
+          minimum: 0
+          example: 0
+        handIndex:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: Which of the four hands to bet on
+          example: 1
+        betAmount:
+          type: number
+          minimum: 0.01
+          example: 25.00
+
+    PlaceBetResponse:
+      type: object
+      properties:
+        acknowledgement:
+          type: string
+          enum: [ACK, NACK]
+        message:
+          type: string
+          example: "Bet placed successfully."
+        updatedSeatBalance:
+          type: number
+          example: 475.00
+
+    TopUpRequest:
+      type: object
+      required: [playerId, amount]
+      properties:
+        playerId:
+          type: string
+          example: "abc123"
+        amount:
+          type: number
+          minimum: 0.01
+          example: 100.00
+
+    TopUpResponse:
+      type: object
+      properties:
+        acknowledgement:
+          type: string
+          enum: [ACK, NACK]
+        newSeatBalance:
+          type: number
+          example: 600.00
+        newAccountBalance:
+          type: number
+          example: 900.00
+
+    SitRequest:
+      type: object
+      required: [playerId, buyInAmount]
+      properties:
+        playerId:
+          type: string
+          example: "abc123"
+        buyInAmount:
+          type: number
+          minimum: 0.01
+          example: 500.00
+
+    SitResponse:
+      type: object
+      properties:
+        acknowledgement:
+          type: string
+          enum: [ACK, NACK]
+        seatId:
+          type: integer
+          example: 1
+        seatBalance:
+          type: number
+          example: 500.00
+
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Invalid tableId."
+
+    GameState:
+      type: string
+      description: |
+        The lifecycle state of a Texas Hedge'Em game.
+        States progress linearly: SETUP → START → HOLE → FLOP → TURN → RIVER.
+      enum:
+        - UNCHANGED
+        - INVALID_CARD
+        - CARD_ALREADY_DEALT
+        - STATUS_SETUP
+        - STATUS_START
+        - STATUS_MANUAL_DEALING_HOLE
+        - STATUS_HOLE
+        - STATUS_FLOP_CARD1
+        - STATUS_FLOP_CARD2
+        - STATUS_FLOP_CARD3
+        - STATUS_FLOP
+        - STATUS_TURN
+        - STATUS_RIVER
+      example: STATUS_HOLE
+
+    BettingStage:
+      type: integer
+      description: |
+        The current betting stage.
+        - `-1` NON_BETTING — no bets accepted (river, setup)
+        - `0` HOLE — betting on hole cards
+        - `1` FLOP — betting on flop cards
+        - `2` TURN — betting on turn card
+      enum: [-1, 0, 1, 2]
+      example: 0
+
+    HandStatus:
+      type: string
+      description: |
+        The display status of a hand's betting panel at a given stage.
+        Used by the game client to render panels appropriately.
+        - `IN_PLAY_DEAD` — hand cannot win; no bets accepted
+        - `IN_PLAY_WILL_WIN` — hand is guaranteed to win or draw; no bets accepted
+        - `IN_PLAY_FAVOURITE` — leading hand; bets accepted at lower odds
+        - `IN_PLAY_WINNER` — revealed winner at river
+      enum:
+        - UNDEFINED
+        - IN_NON_BETTING_STAGE
+        - IN_PLAY_PREVIOUS_BETTING_STAGE_NOT_ACTIVE
+        - IN_PLAY_BETTING_STAGE_ACTIVE
+        - IN_PLAY_DISABLED
+        - IN_PLAY_DEAD
+        - IN_PLAY_FAVOURITE
+        - IN_PLAY_WILL_WIN
+        - IN_PLAY_WINNER
+      example: IN_PLAY_FAVOURITE

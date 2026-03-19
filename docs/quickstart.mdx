@@ -1,0 +1,94 @@
+---
+title: Quickstart
+description: Make your first HedgeEm API call in under 5 minutes.
+---
+
+## 1. Check the API is running
+
+```bash
+curl https://hedgeem-v5.qeetoto.com/api/health
+```
+
+```json
+{
+  "status": "ok",
+  "service": "hedgeem-api",
+  "version": "0.1.0",
+  "timestamp": "2026-03-19T10:00:00.000Z"
+}
+```
+
+## 2. Get a Supabase JWT
+
+Sign in via Supabase Auth to obtain a Bearer token. See [Authentication](/authentication).
+
+```bash
+# Store your token
+TOKEN="your-supabase-jwt-here"
+```
+
+## 3. Sit at a table
+
+```bash
+curl -X POST https://hedgeem-v5.qeetoto.com/api/tables/1/sit \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"playerId": "your-player-id", "buyInAmount": 500}'
+```
+
+```json
+{
+  "acknowledgement": "ACK",
+  "seatId": 1,
+  "seatBalance": 500.00
+}
+```
+
+## 4. Get the game state
+
+```bash
+curl https://hedgeem-v5.qeetoto.com/api/tables/1/state \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+The response includes the current game state, all four hands, community cards, and the odds panels for each hand.
+
+## 5. Advance to the Hole stage
+
+```bash
+curl -X POST https://hedgeem-v5.qeetoto.com/api/tables/1/advance \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+The response returns the updated game state with `gameState: "STATUS_HOLE"` and
+four dealt hands in the `hands` array.
+
+## 6. Place a bet
+
+Bet 50 chips on hand index 0 (the first hand):
+
+```bash
+curl -X POST https://hedgeem-v5.qeetoto.com/api/tables/1/bet \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "playerId": "your-player-id",
+    "seatIndex": 0,
+    "handIndex": 0,
+    "betAmount": 50
+  }'
+```
+
+```json
+{
+  "acknowledgement": "ACK",
+  "message": "Bet placed successfully.",
+  "updatedSeatBalance": 450.00
+}
+```
+
+## Next steps
+
+- [Game States](/concepts/game-states) — understand the full game lifecycle
+- [Card Notation](/concepts/card-notation) — how cards are represented in the API
+- [Full API Reference](/api-reference/health) — all endpoints

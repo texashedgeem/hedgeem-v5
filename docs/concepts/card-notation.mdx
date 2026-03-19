@@ -1,0 +1,54 @@
+---
+title: Card Notation
+description: How playing cards are represented as strings in the HedgeEm API.
+---
+
+## Format
+
+Cards are represented as two-character strings: **rank** + **suit**.
+
+```
+AcKd  =  Ace of Clubs, King of Diamonds
+QsJh  =  Queen of Spades, Jack of Hearts
+```
+
+## Ranks
+
+| Character | Rank |
+|-----------|------|
+| `A` | Ace |
+| `K` | King |
+| `Q` | Queen |
+| `J` | Jack |
+| `T` | Ten |
+| `9`–`2` | Nine through Two |
+
+## Suits
+
+| Character | Suit |
+|-----------|------|
+| `s` | Spades ♠ |
+| `h` | Hearts ♥ |
+| `d` | Diamonds ♦ |
+| `c` | Clubs ♣ |
+
+## Examples
+
+| String | Card |
+|--------|------|
+| `As` | Ace of Spades |
+| `Kh` | King of Hearts |
+| `Td` | Ten of Diamonds |
+| `2c` | Two of Clubs |
+
+## Hands and community cards
+
+- **Hole hands**: Two-card strings concatenated — e.g. `"AcKd"` (Ace of Clubs + King of Diamonds)
+- **Community cards**: Each card is a separate field (`flopCard1`, `flopCard2`, etc.)
+
+## In the game client
+
+The game client (Phaser 3) maps card strings to card assets using the convention:
+`{rank}{suit}.png` — e.g. `Ac.png`, `Kd.png`.
+
+Asset filenames use **lowercase** suit: `s`, `h`, `d`, `c`.

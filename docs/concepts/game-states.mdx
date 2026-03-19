@@ -1,0 +1,68 @@
+---
+title: Game States
+description: The Texas Hedge'Em game lifecycle and state machine.
+---
+
+## Overview
+
+A Texas Hedge'Em game moves through a fixed sequence of states. The `gameState`
+field in [HedgeEmGameState](/api-reference/tables/state) tells the client exactly
+where in the lifecycle the game is.
+
+## State lifecycle
+
+```
+STATUS_SETUP
+    ↓  (advance)
+STATUS_START
+    ↓  (advance)
+STATUS_HOLE          ← Hole betting open
+    ↓  (advance)
+STATUS_FLOP_CARD1
+    ↓
+STATUS_FLOP_CARD2
+    ↓
+STATUS_FLOP_CARD3
+    ↓
+STATUS_FLOP          ← Flop betting open
+    ↓  (advance)
+STATUS_TURN          ← Turn betting open
+    ↓  (advance)
+STATUS_RIVER         ← Winner revealed, payouts calculated
+    ↓  (advance)
+STATUS_SETUP         ← Next game begins
+```
+
+## Betting stages
+
+The `bettingStage` field indicates which stage is currently accepting bets:
+
+| Value | Stage | Description |
+|-------|-------|-------------|
+| `-1` | `NON_BETTING` | No bets accepted (river, setup) |
+| `0` | `HOLE` | Betting on hole cards |
+| `1` | `FLOP` | Betting on the flop |
+| `2` | `TURN` | Betting on the turn card |
+
+## Hand status
+
+Each hand's odds panel has a `handStatus` that drives how the game client renders it:
+
+| Status | Meaning | Betting |
+|--------|---------|---------|
+| `IN_PLAY_BETTING_STAGE_ACTIVE` | Current stage, bets open | ✅ Open |
+| `IN_PLAY_FAVOURITE` | Leading hand | ✅ Open (lower odds) |
+| `IN_PLAY_PREVIOUS_BETTING_STAGE_NOT_ACTIVE` | Earlier stage, game moved on | ❌ Closed |
+| `IN_PLAY_DISABLED` | Cannot bet at this stage | ❌ Closed |
+| `IN_PLAY_DEAD` | Hand cannot win — no remaining outs | ❌ Closed |
+| `IN_PLAY_WILL_WIN` | Guaranteed winner or draw | ❌ Closed |
+| `IN_PLAY_WINNER` | Revealed winner at river | — |
+
+## Example: 4-hand game at the Hole stage
+
+At `STATUS_HOLE`, the `handOdds` array will contain 4 entries — one per hand —
+all with `bettingStage: 0` (HOLE). Subsequent stages (FLOP, TURN) will have
+`IN_PLAY_PREVIOUS_BETTING_STAGE_NOT_ACTIVE` for earlier panels.
+
+As the game progresses, some hands will be marked `IN_PLAY_DEAD` and others
+may become `IN_PLAY_WILL_WIN` if the outcome is already determined.

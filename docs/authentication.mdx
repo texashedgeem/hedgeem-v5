@@ -1,0 +1,46 @@
+---
+title: Authentication
+description: How to authenticate with the HedgeEm API using Supabase JWTs.
+---
+
+All endpoints except `GET /api/health` require a valid Supabase JWT passed as a
+Bearer token in the `Authorization` header.
+
+```
+Authorization: Bearer <your-supabase-jwt>
+```
+
+<Note>
+  Authentication is currently in **stub mode** (HEDGE-31). Any Bearer token is accepted.
+  Real Supabase JWT verification will be added when HEDGE-31 is implemented.
+</Note>
+
+## Obtaining a token
+
+Sign in via the Supabase Auth API for your project:
+
+```bash
+curl -X POST https://your-project.supabase.co/auth/v1/token?grant_type=password \
+  -H "apikey: your-supabase-anon-key" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "player@example.com", "password": "your-password"}'
+```
+
+The response includes an `access_token` — use this as your Bearer token.
+
+## Token lifetime
+
+Supabase JWTs are valid for 1 hour by default. The game client should handle
+token refresh automatically using the Supabase JS client.
+
+## Error response
+
+If the token is missing or invalid, the API returns:
+
+```json
+{
+  "error": "Missing or invalid Authorization header."
+}
+```
+
+With HTTP status `401 Unauthorized`.
