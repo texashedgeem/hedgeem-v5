@@ -51,9 +51,9 @@ Planning and early development phase. Three prior versions being revived and ana
 
 ## Current Focus
 
-**Next: HEDGE-28** — Mintlify documentation for HedgeEm v5 REST API
-Last done: HEDGE-27 (Node.js/TypeScript REST API scaffold, committed 2026-03-19)
-Simon actions pending: update $JIRA_TOKEN in ~/.zshrc; manually mark HEDGE-27 Done in Jira; provide SQLite DB (HEDGE-29).
+**Next: HEDGE-30** — Port Phase 1 (utility methods: card shuffler, chip denominations, hand descriptions)
+Last done: HEDGE-28 (Mintlify docs + OpenAPI spec, committed 2026-03-19)
+Simon actions pending: update $JIRA_TOKEN in ~/.zshrc; manually mark HEDGE-27 + HEDGE-28 Done in Jira; provide SQLite DB (HEDGE-29); connect Mintlify to docs.qeetoto.com.
 
 ## Claude Behaviour Standards
 
