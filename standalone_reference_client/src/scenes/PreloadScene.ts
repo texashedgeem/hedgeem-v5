@@ -14,14 +14,17 @@ export class PreloadScene extends Phaser.Scene {
 
   preload(): void {
     // Card spritesheet: 980×768, 98×128 per frame, 10 cols × 6 rows = 60 frames (52 cards + back at 52)
-    this.load.spritesheet('cards', 'cards_hedgeem_blue.png', { frameWidth: 98, frameHeight: 128 });
-    this.load.image('table', 'tablel3.png');
+    // cards_orange.png = default brand (BRAND="" in JS client, live at hedgeem.qeetoto.com)
+    this.load.spritesheet('cards', 'cards_orange.png', { frameWidth: 98, frameHeight: 128 });
+    // tablel_hedgeem_blue.png = 1384×1385 — centred on 1024×640 canvas, crops to fit (matches JS client)
+    this.load.image('table', 'tablel_hedgeem_blue.png');
     this.load.image('dealbutton', 'dealbutton.png');
     this.load.image('hand1', 'hand1.png');
     this.load.image('hand2', 'hand2.png');
     this.load.image('hand3', 'hand3.png');
     this.load.image('hand4', 'hand4.png');
-    this.load.image('deadhand', 'deadhand_skull.png');
+    // deadhand.png (not deadhand_skull) matches JS client asset
+    this.load.image('deadhand', 'deadhand.png');
     this.load.image('cantlose', 'cantlose.png');
     this.load.image('chips', 'chips.png');
   }

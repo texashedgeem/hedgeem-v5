@@ -16,7 +16,9 @@ import Phaser from 'phaser';
 import { GameEngine } from '../engine/GameEngine';
 import { ApiClient } from '../engine/ApiClient';
 
-const NUMBER_OF_HANDS = 4;
+// Default to 3-handed (matches JS client default/live config). Change to 4 for four-handed mode.
+const NUMBER_OF_HANDS = 3;
+// Starting credits £100.00 — stored as pence (10000p) for integer arithmetic, displayed as £x.xx
 const INITIAL_CREDITS = 10_000;
 
 // Card display size (scaled from 98×128 source)
@@ -24,9 +26,8 @@ const CARD_W = 71;
 const CARD_H = 100;
 
 // Tint values matching the original JS client
-const TINT_LIVE   = 0xffffff;
-const TINT_DEAD   = 0x7f7f7f;
-const TINT_WINNER = 0xffe040;
+const TINT_LIVE = 0xffffff;
+const TINT_DEAD = 0x7f7f7f;
 
 export class GameScene extends Phaser.Scene {
   private engine!: GameEngine;
@@ -65,8 +66,9 @@ export class GameScene extends Phaser.Scene {
   private _buildUI(): void {
     const { width, height } = this.scale;
 
-    // Table background
-    this.add.image(width / 2, height / 2, 'table').setDisplaySize(width, height);
+    // Table background: 1384×1385 image centred at (512,320) — larger than canvas so it crops,
+    // matching how the JS client renders tablel_hedgeem_blue.png (no scaling, anchor 0.5).
+    this.add.image(512, 320, 'table');
 
     // Hand panel images (one per hand) — positioned across the lower half
     const handPanelY = 390;
@@ -78,9 +80,9 @@ export class GameScene extends Phaser.Scene {
       this.imgDeadHand[i] = this.add.image(x, handPanelY, 'deadhand')
         .setVisible(false).setDepth(2);
 
-      // Odds text (over hand panel)
+      // Odds text (over hand panel) — gold/yellow matching JS client display
       this.oddsTexts[i] = this.add.text(x, handPanelY - 10, '', {
-        fontSize: '20px', color: '#ffffff', fontFamily: 'monospace',
+        fontSize: '20px', color: '#f0c040', fontFamily: 'monospace',
         stroke: '#000000', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(3).setVisible(false);
 
@@ -195,41 +197,59 @@ export class GameScene extends Phaser.Scene {
 
   private _renderCards(dealStatus: number): void {
     const cards = this.engine.getCardData();
+    const nHands = this.engine.getNumberOfHands();
 
-    // Hole cards — reveal all 8 immediately at hole stage
-    for (let c = 0; c < NUMBER_OF_HANDS * 2; c++) {
+    for (let c = 0; c < nHands * 2; c++) {
       const hand = Math.floor(c / 2);
       const cardInHand = c % 2;
       const x = this._handCentreX(hand) + (cardInHand === 0 ? -20 : 20);
       const y = 310;
-
       const sprite = this.imgCard[c];
       sprite.setPosition(x, y).setVisible(true);
-      sprite.setFrame(4 * cards[c].rank + cards[c].suit);
 
-      // Tint dead hands
-      if (dealStatus >= 1 && this.engine.isHandDead(hand)) {
-        sprite.setTint(TINT_DEAD);
-      } else if (dealStatus === 3 && this.engine.isHandWinner(hand)) {
-        sprite.setTint(TINT_WINNER);
+      // JS client: only Hand 1 (index 0) is revealed face-up at hole stage.
+      // All other hands show card back until they are dealt in subsequent states.
+      // For now (no dealing animation) we reveal hand 1 at hole, all hands from flop onward.
+      const faceUp = hand === 0 || dealStatus >= 1;
+
+      if (faceUp) {
+        sprite.setFrame(4 * cards[c].rank + cards[c].suit);
+        // Dead cards: grey tint (matches JS client CC_DEAD_CARD = 0x7f7f7f)
+        if (dealStatus >= 1 && this.engine.isHandDead(hand)) {
+          sprite.setTint(TINT_DEAD);
+        } else if (dealStatus === 3 && this.engine.isHandWinner(hand)) {
+          sprite.setTint(TINT_LIVE); // JS client keeps winners at full white, not gold
+        } else {
+          sprite.setTint(TINT_LIVE);
+        }
       } else {
+        sprite.setFrame(52); // card back
         sprite.setTint(TINT_LIVE);
       }
     }
 
-    // Community cards — reveal progressively
-    const communityReveal = [0, 3, 1, 1]; // hole:0, flop:3, turn:1, river:1
+    // Hide unused card sprites for 3-handed mode (cards 6 & 7 = hand 4 hole cards)
+    for (let c = nHands * 2; c < 8; c++) {
+      this.imgCard[c].setVisible(false);
+    }
+
+    // Community cards: face-down at hole stage, revealed progressively from flop
+    // hole:0 revealed, flop:3, turn:+1, river:+1
+    const communityReveal = [0, 3, 1, 1];
     let revealed = 0;
     for (let s = 0; s <= dealStatus; s++) revealed += communityReveal[s];
 
     for (let c = 0; c < 5; c++) {
       const sprite = this.imgCard[8 + c];
-      if (c < revealed) {
+      if (revealed === 0) {
+        // All community cards face-down at hole stage
+        sprite.setFrame(52).setTint(TINT_LIVE).setVisible(true);
+      } else if (c < revealed) {
         sprite.setFrame(4 * cards[8 + c].rank + cards[8 + c].suit)
-              .setTint(TINT_LIVE)
-              .setVisible(true);
+              .setTint(TINT_LIVE).setVisible(true);
       } else {
-        sprite.setVisible(false);
+        // Not yet revealed — still show face-down (not hidden)
+        sprite.setFrame(52).setTint(TINT_LIVE).setVisible(true);
       }
     }
   }
@@ -254,7 +274,7 @@ export class GameScene extends Phaser.Scene {
         this.oddsTexts[i].setText('DEAD').setColor('#ff4444');
         this.handDescTexts[i].setText('');
       } else if (info) {
-        this.oddsTexts[i].setText(`×${info.oddsRounded.toFixed(1)}`).setColor('#ffffff');
+        this.oddsTexts[i].setText(`×${info.oddsRounded.toFixed(1)}`).setColor('#f0c040');
         this.handDescTexts[i].setText(info.handDescShort);
       }
     }
@@ -271,7 +291,8 @@ export class GameScene extends Phaser.Scene {
   /** Horizontal centre of hand i, evenly spaced across the canvas */
   private _handCentreX(i: number): number {
     const { width } = this.scale;
-    const spacing = width / (NUMBER_OF_HANDS + 1);
+    const n = this.engine ? this.engine.getNumberOfHands() : NUMBER_OF_HANDS;
+    const spacing = width / (n + 1);
     return spacing * (i + 1);
   }
 }
