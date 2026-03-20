@@ -38,12 +38,14 @@ export class GameScene extends Phaser.Scene {
   private imgHand: Phaser.GameObjects.Image[] = [];
   private imgDeadHand: Phaser.GameObjects.Image[] = [];
   private dealBtn!: Phaser.GameObjects.Image;
-  private advanceBtn!: Phaser.GameObjects.Text;
+  private advanceBtn!: Phaser.GameObjects.Image;
 
   // Text overlays
   private oddsTexts: Phaser.GameObjects.Text[] = [];
   private handDescTexts: Phaser.GameObjects.Text[] = [];
   private creditsText!: Phaser.GameObjects.Text;
+  private totalBetText!: Phaser.GameObjects.Text;
+  private winText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private dataSourceText!: Phaser.GameObjects.Text;
 
@@ -109,8 +111,8 @@ export class GameScene extends Phaser.Scene {
       this.imgCard[8 + c].setPosition(communityXs[c], communityY);
     }
 
-    // Deal button
-    this.dealBtn = this.add.image(width / 2, height - 60, 'dealbutton')
+    // Deal button — centred, circular sprite
+    this.dealBtn = this.add.image(width / 2, height - 55, 'dealbutton')
       .setDisplaySize(90, 90)
       .setInteractive({ useHandCursor: true })
       .setDepth(4);
@@ -118,18 +120,30 @@ export class GameScene extends Phaser.Scene {
     this.dealBtn.on('pointerover', () => this.dealBtn.setTint(0xddddff));
     this.dealBtn.on('pointerout',  () => this.dealBtn.clearTint());
 
-    // Advance button (text — sits next to deal area)
-    this.advanceBtn = this.add.text(width / 2, height - 28, '▶  ADVANCE', {
-      fontSize: '15px', color: '#ffcc00', fontFamily: 'monospace',
-      backgroundColor: '#333300', padding: { x: 12, y: 5 },
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false).setDepth(4);
+    // Advance button — circular green sprite on the right side (mirrors deal button position)
+    this.advanceBtn = this.add.image(width - 55, height - 55, 'dealbutton')
+      .setDisplaySize(90, 90)
+      .setTint(0x40c040)
+      .setInteractive({ useHandCursor: true })
+      .setVisible(false)
+      .setDepth(4);
     this.advanceBtn.on('pointerdown', () => this._onAdvance());
+    this.advanceBtn.on('pointerover', () => this.advanceBtn.setTint(0x80ff80));
+    this.advanceBtn.on('pointerout',  () => this.advanceBtn.setTint(0x40c040));
 
-    // Credits
-    this.creditsText = this.add.text(14, height - 22, `Credits: ${INITIAL_CREDITS}`, {
-      fontSize: '13px', color: '#ffffff', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 2,
-    }).setDepth(4);
+    // Bottom bar — Credits / Total Bet / Win (large, £x.xx format)
+    const barY = height - 18;
+    const labelStyle = { fontSize: '11px', color: '#aaaaaa', fontFamily: 'monospace' };
+    const valueStyle = { fontSize: '18px', color: '#ffffff', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: 2 };
+
+    this.add.text(80,       barY - 14, 'CREDITS',   labelStyle).setOrigin(0.5).setDepth(4);
+    this.add.text(width / 2, barY - 14, 'TOTAL BET', labelStyle).setOrigin(0.5).setDepth(4);
+    this.add.text(width - 80, barY - 14, 'WIN',      labelStyle).setOrigin(0.5).setDepth(4);
+
+    this.creditsText  = this.add.text(80,       barY, `£${(INITIAL_CREDITS / 100).toFixed(2)}`, valueStyle).setOrigin(0.5).setDepth(4);
+    this.totalBetText = this.add.text(width / 2, barY, '£0.00', valueStyle).setOrigin(0.5).setDepth(4);
+    this.winText      = this.add.text(width - 80, barY, '£0.00', valueStyle).setOrigin(0.5).setDepth(4);
 
     // Status + data source
     this.statusText = this.add.text(width / 2, 18, "Texas Hedge'Em", {
@@ -137,7 +151,7 @@ export class GameScene extends Phaser.Scene {
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(4);
 
-    this.dataSourceText = this.add.text(width - 10, height - 22, '', {
+    this.dataSourceText = this.add.text(width - 10, 8, '', {
       fontSize: '11px', color: '#88ff88', fontFamily: 'monospace',
     }).setOrigin(1, 0).setDepth(4);
   }
@@ -281,7 +295,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private _renderCredits(): void {
-    this.creditsText.setText(`Credits: ${this.engine.getCredits().toFixed(0)}`);
+    this.creditsText.setText(this._pence(this.engine.getCredits()));
+    // Total Bet and Win will be populated once HEDGE-50 betting is implemented
+    this.totalBetText.setText(this._pence(0));
+    this.winText.setText(this._pence(0));
+  }
+
+  /** Format pence value as £x.xx */
+  private _pence(p: number): string {
+    return `£${(p / 100).toFixed(2)}`;
   }
 
   // ----------------------------------------------------------------
