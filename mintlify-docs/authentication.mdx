@@ -15,6 +15,25 @@ Authorization: Bearer <your-supabase-jwt>
   Real Supabase JWT verification will be added when HEDGE-31 is implemented.
 </Note>
 
+## Testing in the Mintlify playground
+
+When you open an endpoint in the API Reference and click **Try it**, the playground
+shows an **Authorization** input field. In stub mode, enter any non-empty value —
+for example `test` — and click **Send**.
+
+<Steps>
+  <Step title="Open an endpoint">
+    Navigate to any endpoint in the API Reference (e.g. **Game → Deal Hands**).
+  </Step>
+  <Step title="Enter a token">
+    In the **Authorization** field, type any value such as `test`.
+    The playground will send `Authorization: Bearer test`.
+  </Step>
+  <Step title="Send the request">
+    Fill in any required body fields and click **Send**. You should receive a `200` response.
+  </Step>
+</Steps>
+
 ## Obtaining a token
 
 Sign in via the Supabase Auth API for your project:
