@@ -51,10 +51,10 @@ Planning and early development phase. Three prior versions being revived and ana
 
 ## Current Focus
 
-**Next: HEDGE-30** — Port Phase 1 (utility methods: card shuffler, chip denominations, hand descriptions)
-Last done: HEDGE-28 (Mintlify docs + OpenAPI spec — live at https://hedgeem-api.qeetoto.com)
-Simon actions pending: provide SQLite DB (HEDGE-29); connect Mintlify to docs.qeetoto.com (custom domain in dashboard).
-Mintlify: dashboard.mintlify.com/qeetoto/qeetoto — monorepo path: mintlify-docs/
+**Next: HEDGE-31** — Port Phase 2 (Auth endpoints)
+Last done: api/deal.ts — tactical deal endpoint (shuffle + 4-hand deal + pre-flop odds via poker-odds-calculator). HEDGE-43 created for UMA C++ sidecar (strategic odds path).
+Simon actions pending: none.
+Mintlify: live at https://hedgeem-api.qeetoto.com/introduction — dashboard.mintlify.com/qeetoto/qeetoto — monorepo path: mintlify-docs/
 
 ## Claude Behaviour Standards
 

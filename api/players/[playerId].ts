@@ -1,7 +1,24 @@
-// GET /api/players/:playerId
-// Returns a player's profile and account balance.
-// Equivalent to: ws_get_player_account_balance in hedgeem_server.
-// STUB: Returns stub player data. Wire to Supabase (HEDGE-31/32).
+/**
+ * GET /api/players/:playerId
+ *
+ * Returns a player's profile and account balance.
+ * Equivalent to: f_get_reference_to_player_by_id / f_get_reference_to_player_by_username
+ * in HedgeEmServerAPI.cs
+ *
+ * Returns a HedgeEmPlayer object containing:
+ *   - playerId (UUID — Supabase auth.users.id in v5)
+ *   - username and displayName
+ *   - accountBalance (the player's main wallet — not their seat balance at any table)
+ *   - avatarImageUrl
+ *   - role (BASIC_USER, PAYING_USER, ANON_USER, ADMIN)
+ *   - isActive
+ *   - personalTableId (every player has their own personal HedgeEm table, id = -1 if not yet created)
+ *
+ * Note: accountBalance is the player's overall balance across all tables. Seat balance
+ * (the chips in front of them at a specific table) is separate — see GET /tables/:id/state.
+ *
+ * STUB: Returns stub player data. Wire to Supabase Auth + players table (HEDGE-31).
+ */
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors, handleOptions } from '../_lib/cors';
 import { authenticate } from '../_lib/auth';

@@ -65,3 +65,16 @@ export enum AcknowledgementType {
   NACK = 'NACK',
   UNKNOWN = 'UNKNOWN',
 }
+
+// Ported from HedgeEmUtility.cs enum_chip_denomination
+// Values in descending order so chip calculator iterates from highest to lowest
+export enum ChipDenomination {
+  C1000 = 0,
+  C500  = 1,
+  C100  = 2,
+  C50   = 3,
+  C25   = 4,
+  C10   = 5,
+  C5    = 6,
+  C1    = 7,
+}

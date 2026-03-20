@@ -53,6 +53,77 @@ paths:
                 version: 0.1.0
                 timestamp: "2026-03-19T10:00:00.000Z"
 
+  /api/deal:
+    post:
+      summary: Deal hands
+      description: |
+        Shuffles a fresh deck, deals hole cards to N simultaneous hands, and returns
+        pre-flop win/draw odds for each hand.
+
+        This is the first call in a new game — it replaces the combined effect of:
+        - `HedgeEmUtility.f_shuffle_deck` (5-pass Fisher-Yates shuffle)
+        - The `STATUS_START → STATUS_HOLE` transition in `f_change_table_game_state`
+        - UMA math engine pre-flop equity calculation
+
+        **Odds engine (tactical):** Monte Carlo simulation via `poker-odds-calculator`
+        (100,000 iterations). The strategic replacement is the UMA C++ math engine
+        deployed as an HTTP microservice (HEDGE-43).
+
+        The hand with the highest `winPercentage` is marked `IN_PLAY_FAVOURITE`;
+        all others are `IN_PLAY_BETTING_STAGE_ACTIVE`.
+
+        The `remainingDeck` array contains the 44 undealt cards — these are the
+        pool from which the flop, turn, and river will be drawn.
+      operationId: dealHands
+      tags: [Game]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DealRequest'
+            example:
+              numberOfHands: 4
+      responses:
+        "200":
+          description: Shuffled hands and pre-flop odds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DealResponse'
+              example:
+                hands: ["AcKd", "QsJs", "8h7c", "5d2c"]
+                handOdds:
+                  - handIndex: 0
+                    bettingStage: 0
+                    handStatus: IN_PLAY_FAVOURITE
+                    winPercentage: 62.4
+                    drawPercentage: 2.1
+                    odds: 1.60
+                  - handIndex: 1
+                    bettingStage: 0
+                    handStatus: IN_PLAY_BETTING_STAGE_ACTIVE
+                    winPercentage: 21.3
+                    drawPercentage: 1.8
+                    odds: 4.69
+                  - handIndex: 2
+                    bettingStage: 0
+                    handStatus: IN_PLAY_BETTING_STAGE_ACTIVE
+                    winPercentage: 10.2
+                    drawPercentage: 0.9
+                    odds: 9.80
+                  - handIndex: 3
+                    bettingStage: 0
+                    handStatus: IN_PLAY_BETTING_STAGE_ACTIVE
+                    winPercentage: 6.1
+                    drawPercentage: 0.5
+                    odds: 16.39
+                remainingDeck: ["2c", "3d", "4h", "..."]
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
   /api/tables/{tableId}/state:
     get:
       summary: Get game state
@@ -609,6 +680,45 @@ components:
         seatBalance:
           type: number
           example: 500.00
+
+    DealRequest:
+      type: object
+      properties:
+        numberOfHands:
+          type: integer
+          description: Number of simultaneous hole card hands to deal (2–6, default 4)
+          minimum: 2
+          maximum: 6
+          default: 4
+          example: 4
+
+    DealResponse:
+      type: object
+      properties:
+        hands:
+          type: array
+          description: |
+            Dealt hole card pairs. Each string is two concatenated card codes,
+            e.g. `"AcKd"` = Ace of clubs + King of diamonds.
+            See [Card Notation](/concepts/card-notation).
+          items:
+            type: string
+          example: ["AcKd", "QsJs", "8h7c", "5d2c"]
+        handOdds:
+          type: array
+          description: |
+            Pre-flop odds for each hand. Same shape as the `handOdds` array in
+            `HedgeEmGameState` — the game client renders these directly as betting panels.
+          items:
+            $ref: '#/components/schemas/HedgeEmHandOdds'
+        remainingDeck:
+          type: array
+          description: |
+            The 44 cards not yet in play. The flop (3 cards), turn (1), and river (1)
+            will be drawn from this pool when the game advances.
+          items:
+            type: string
+          example: ["2c", "3d", "4h", "5s"]
 
     ApiError:
       type: object

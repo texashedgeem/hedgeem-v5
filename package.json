@@ -9,11 +9,13 @@
     "test": "echo \"No tests yet — see HEDGE-37\""
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.78.0"
+    "@supabase/supabase-js": "^2.78.0",
+    "poker-odds-calculator": "^0.4.0",
+    "pokersolver": "^2.1.4"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@vercel/node": "^5.6.11",
+    "@vercel/node": "^5.0.0",
     "typescript": "^5.4.0"
   }
 }

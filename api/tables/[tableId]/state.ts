@@ -1,6 +1,24 @@
-// GET /api/tables/:tableId/state
-// Returns the current game state for a table.
-// STUB: Returns a realistic STATUS_HOLE game state. Wire to Supabase (HEDGE-32/33).
+/**
+ * GET /api/tables/:tableId/state
+ *
+ * Returns the current game state for a table without advancing it.
+ * Equivalent to: get_game_state_object in hedgeem_server (the non-advancing variant).
+ *
+ * Returns a HedgeEmGameState object containing:
+ *   - Current game state enum (STATUS_HOLE, STATUS_FLOP, STATUS_TURN, STATUS_RIVER etc.)
+ *   - Current betting stage
+ *   - Hole cards for each hand (dealt at STATUS_HOLE)
+ *   - Community cards (flop/turn/river — null until dealt)
+ *   - Seat assignments and seat balances
+ *   - All placed bets for the current game
+ *   - Hand odds for each hand at each betting stage (win%, draw%, odds multiplier)
+ *   - Jackpot value
+ *
+ * This endpoint is polled by the client to refresh UI state. The advancing variant
+ * (POST /advance) calls f_change_table_game_state and returns the new state.
+ *
+ * STUB: Returns a realistic STATUS_HOLE game state. Wire to Supabase (HEDGE-32/33).
+ */
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors, handleOptions } from '../../_lib/cors';
 import { BettingStage, GameState, HandStatus } from '../../_lib/enums';

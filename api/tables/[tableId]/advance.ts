@@ -1,7 +1,26 @@
-// POST /api/tables/:tableId/advance
-// Advances the game to the next stage (hole → flop → turn → river → next game).
-// Equivalent to: get_next_game_state_object in hedgeem_server.
-// STUB: Returns the next logical state. Wire to real game engine (HEDGE-33).
+/**
+ * POST /api/tables/:tableId/advance
+ *
+ * Advances the game to the next state and returns the new game state.
+ * Equivalent to: get_next_game_state_object → f_change_table_game_state in HedgeEmServerAPI.cs
+ *
+ * The only way to change a game's state is via the HedgeEm Master Server.
+ * Clients call this method so the server needs to know as much as possible about the caller.
+ *
+ * Game state machine (from HedgeEmTable.f_transistion_to_next_game_state):
+ *   STATUS_START → STATUS_HOLE → STATUS_FLOP → STATUS_TURN → STATUS_RIVER → STATUS_START
+ *
+ * Key transitions:
+ *   - STATUS_START: shuffles deck, deals hole cards, calculates opening odds
+ *   - STATUS_FLOP: deals 3 community cards, recalculates odds
+ *   - STATUS_TURN: deals 1 community card, recalculates odds
+ *   - STATUS_RIVER: deals final card, calls f_pay_winners(), persists game record to DB
+ *   - Back to STATUS_START: increments games played count, clears cards, prepares next game
+ *
+ * Note: in FASTPLAY_FLOP mode the game skips STATUS_TURN and goes directly FLOP → RIVER.
+ *
+ * STUB: Returns the next logical state. Wire to real game engine (HEDGE-33).
+ */
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors, handleOptions } from '../../_lib/cors';
 import { authenticate } from '../../_lib/auth';

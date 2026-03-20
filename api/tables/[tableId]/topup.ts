@@ -1,7 +1,18 @@
-// POST /api/tables/:tableId/topup
-// Transfers chips from the player's account balance to their seat balance.
-// Equivalent to: ws_top_up_chips_at_table in hedgeem_server.
-// STUB: Returns updated balances. Wire to Supabase (HEDGE-34).
+/**
+ * POST /api/tables/:tableId/topup
+ *
+ * Sets the player's seat balance at a given table.
+ * Equivalent to: ws_top_up_chips_at_table → f_set_players_balance_at_a_given_table in HedgeEmServerAPI.cs
+ *
+ * Note: in the original C# implementation this sets the seat balance to the absolute
+ * value supplied (not an increment). The original server had a known bug noted in comments:
+ * "the balance is not set / seat id is ignored" — this will need care when wiring to Supabase.
+ *
+ * Note: this is distinct from the initial buy-in (sit). Top-up is used mid-game when a player's
+ * seat balance runs low and they want to add more chips from their account balance.
+ *
+ * STUB: Returns updated balances. Wire to Supabase (HEDGE-34).
+ */
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors, handleOptions } from '../../_lib/cors';
 import { authenticate } from '../../_lib/auth';

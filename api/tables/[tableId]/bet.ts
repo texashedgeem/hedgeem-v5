@@ -1,7 +1,23 @@
-// POST /api/tables/:tableId/bet
-// Places a bet on a hand at the current betting stage.
-// Equivalent to: ws_place_bet in hedgeem_server.
-// STUB: Validates and acknowledges the bet. Wire to Supabase (HEDGE-34).
+/**
+ * POST /api/tables/:tableId/bet
+ *
+ * Places a bet on a specific hand at the current betting stage.
+ * Equivalent to: ws_place_bet → f_place_bet in HedgeEmServerAPI.cs
+ *
+ * Validation and processing steps (from C# f_place_bet):
+ *   1. Check the player id is valid
+ *   2. Check the player has the funds to place the bet at the table where they are seated
+ *   3. Check the game id is valid
+ *   4. Check the stage of the game is valid (must match the current betting stage)
+ *   5. Check if it is a valid bet (e.g. the hand can still be bet on — not dead/winner)
+ *   6. Begin transaction:
+ *      - Decrement the player's seat balance by the bet amount
+ *      - Record the bet against the hand and stage
+ *   7. End transaction
+ *   8. Return HedgeEmBetAcknowledgement (ACK or NACK)
+ *
+ * STUB: Validates and acknowledges the bet. Wire to Supabase (HEDGE-34).
+ */
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors, handleOptions } from '../../_lib/cors';
 import { authenticate } from '../../_lib/auth';

@@ -35,6 +35,10 @@
             "pages": ["api-reference/health"]
           },
           {
+            "group": "Game",
+            "pages": ["api-reference/deal"]
+          },
+          {
             "group": "Tables",
             "pages": [
               "api-reference/tables/state",
