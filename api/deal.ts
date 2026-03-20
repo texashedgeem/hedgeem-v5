@@ -34,7 +34,6 @@ import { authenticate } from './_lib/auth';
 import { BettingStage, HandStatus } from './_lib/enums';
 import { HedgeEmHandOdds } from './_lib/types';
 import { shuffleDeck } from './_lib/utils';
-import { OddsCalculator, CardGroup } from 'poker-odds-calculator';
 
 const MIN_HANDS = 2;
 const MAX_HANDS = 6;
@@ -50,7 +49,13 @@ export interface DealResponse {
   remainingDeck: string[];
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse): void {
+// poker-odds-calculator is pure ESM. Vercel compiles TS to CommonJS, so a static
+// import would become require() at runtime and throw ERR_REQUIRE_ESM.
+// Dynamic import() works in CommonJS and correctly loads the ESM module.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type OddsLib = { OddsCalculator: any; CardGroup: any };
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   applyCors(res);
   if (handleOptions(req, res)) return;
 
@@ -92,7 +97,8 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
 
   // Calculate pre-flop win and tie percentages via Monte Carlo simulation
   // poker-odds-calculator runs 100,000 iterations by default (OddsCalculator.DEFAULT_ITERATIONS)
-  const cardGroups = hands.map(h => CardGroup.fromString(h));
+  const { OddsCalculator, CardGroup } = await import('poker-odds-calculator') as OddsLib;
+  const cardGroups = hands.map((h: string) => CardGroup.fromString(h));
   const result = OddsCalculator.calculate(cardGroups);
 
   // Find the index of the hand with the highest win equity (marks it as favourite)
