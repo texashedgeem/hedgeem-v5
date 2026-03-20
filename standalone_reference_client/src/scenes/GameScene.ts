@@ -74,9 +74,11 @@ export class GameScene extends Phaser.Scene {
   private advanceBtn!: Phaser.GameObjects.Sprite;
 
   // Text overlays
-  // NOTE: Previously BitmapText (handfont) — switched to Text because handfont lacks W/I/N/D/E/A
-  // characters needed for WIN/DEAD labels. HEDGE-84 tracks restoring proper bitmap font styling.
-  private oddsTexts: Phaser.GameObjects.Text[] = [];
+  // oddsTexts: BitmapText using handfont (matches JS client). Handles odds numbers only (x2.1 etc.).
+  // winTexts: regular Text for WIN label — handfont lacks W/I/N so cannot use BitmapText for this.
+  // DEAD is handled by the imgDeadHand skull image; no text needed.
+  private oddsTexts: Phaser.GameObjects.BitmapText[] = [];
+  private winTexts: Phaser.GameObjects.Text[] = [];
   private handDescTexts: Phaser.GameObjects.Text[] = [];
   private creditsText!: Phaser.GameObjects.Text;
   private totalBetText!: Phaser.GameObjects.Text;
@@ -121,12 +123,15 @@ export class GameScene extends Phaser.Scene {
       this.imgDeadHand[i] = this.add.image(x, y, 'deadhand')
         .setVisible(false).setDepth(2);
 
-      // Odds text — bold white, positioned above hand panel.
-      // Uses regular Text (not BitmapText) because handfont lacks letters needed for WIN/DEAD.
-      // HEDGE-84: restore handfont bitmap styling once a font with full charset is sourced.
-      this.oddsTexts[i] = this.add.text(x, y - 35, '', {
-        fontSize: '36px', color: '#ffffff', fontFamily: 'Arial Black, sans-serif',
-        stroke: '#000000', strokeThickness: 4,
+      // Odds BitmapText — handfont matches JS client, size 50. Handles x2.1, x40.0 etc.
+      this.oddsTexts[i] = this.add.bitmapText(x, y - 35, 'handfont', '', 50)
+        .setOrigin(0.5).setDepth(3).setVisible(false);
+
+      // WIN label — regular Text because handfont lacks W/I/N characters.
+      // Shown instead of oddsTexts at game-over when this hand wins.
+      this.winTexts[i] = this.add.text(x, y - 35, 'WIN', {
+        fontSize: '40px', color: '#00ff88', fontFamily: 'Arial Black, sans-serif',
+        stroke: '#000000', strokeThickness: 5,
       }).setOrigin(0.5).setDepth(3).setVisible(false);
 
       // Hand description (below odds) — disabled pending HEDGE-85 config option.
@@ -317,18 +322,23 @@ export class GameScene extends Phaser.Scene {
 
       this.imgDeadHand[i].setVisible(dead);
 
-      this.oddsTexts[i].setVisible(true);
       // HEDGE-85: hand descriptions hidden pending config option — restore setVisible(true) when implemented
       // this.handDescTexts[i].setVisible(true);
 
       if (winner) {
-        this.oddsTexts[i].setText('WIN').setColor('#00ff88');
+        // WIN: hide odds BitmapText, show regular Text (handfont has no W/I/N)
+        this.oddsTexts[i].setVisible(false);
+        this.winTexts[i].setVisible(true);
         // this.handDescTexts[i].setText(info?.handDescShort ?? '');  // HEDGE-85
       } else if (dead) {
-        this.oddsTexts[i].setText('').setColor('#ffffff'); // skull image handles DEAD display
+        // DEAD: skull image handles display — hide both text objects
+        this.oddsTexts[i].setVisible(false);
+        this.winTexts[i].setVisible(false);
         // this.handDescTexts[i].setText('');  // HEDGE-85
       } else if (info) {
-        this.oddsTexts[i].setText(`x${info.oddsRounded.toFixed(1)}`).setColor('#ffffff');
+        // In play: show handfont BitmapText odds, hide WIN label
+        this.oddsTexts[i].setText(`x${info.oddsRounded.toFixed(1)}`).setTint(0xffffff).setVisible(true);
+        this.winTexts[i].setVisible(false);
         // this.handDescTexts[i].setText(info.handDescShort);  // HEDGE-85
       }
     }
