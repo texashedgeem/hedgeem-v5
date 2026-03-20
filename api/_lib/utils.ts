@@ -242,3 +242,72 @@ export function getBestFiveCards(cards: string | string[]): string[] {
   const solved = PokerHand.solve(parseCards(cards));
   return (solved.cards as any[]).map((c: any) => c.value + c.suit);
 }
+
+// ============================================================
+// PRE-FLOP ODDS CALCULATOR
+// Uses pokersolver (CJS) — replaces the ESM-only poker-odds-calculator package.
+// Implements Monte Carlo simulation equivalent to HedgeEmUtility odds methods
+// and the UMA C++ math engine (exact combinatorial version tracked in HEDGE-43).
+//
+// For each iteration we randomly deal 5 community cards from the remaining deck
+// (cards not assigned as hole cards), evaluate each player's best 7-card hand,
+// and determine the winner(s). Ties are counted separately.
+// ============================================================
+
+export interface HandOddsResult {
+  winPercentage: number;
+  drawPercentage: number;
+}
+
+/**
+ * Calculates pre-flop win and draw percentages for a set of hole card pairs
+ * using Monte Carlo simulation.
+ *
+ * @param hands - Array of 4-char hole card pair strings, e.g. ['AcKd', 'QsJs']
+ * @param iterations - Number of Monte Carlo iterations (default 10,000)
+ * @returns Per-hand win% and draw% (draw = split pot / tie)
+ */
+export function calculatePreFlopOdds(hands: string[], iterations = 10_000): HandOddsResult[] {
+  // Split each 4-char hand string into two 2-char card strings
+  const holeCards: [string, string][] = hands.map(h => [h.slice(0, 2), h.slice(2, 4)]);
+
+  // Build the remaining deck: all 52 cards not dealt as hole cards
+  const dealtSet = new Set(holeCards.flat());
+  const remaining: string[] = FULL_DECK.filter(c => !dealtSet.has(c));
+
+  const wins = new Array<number>(hands.length).fill(0);
+  const ties = new Array<number>(hands.length).fill(0);
+
+  for (let iter = 0; iter < iterations; iter++) {
+    // Randomly pick 5 community cards from the remaining deck
+    // (in-place partial Fisher-Yates to avoid allocating a new array each iteration)
+    for (let i = 0; i < 5; i++) {
+      const j = i + Math.floor(Math.random() * (remaining.length - i));
+      const tmp = remaining[i];
+      remaining[i] = remaining[j];
+      remaining[j] = tmp;
+    }
+    const community = remaining.slice(0, 5);
+
+    // Evaluate each hand using pokersolver: best 5 from hole cards + 5 community cards
+    const solved = holeCards.map(([c1, c2]) => PokerHand.solve([c1, c2, ...community]));
+    const winners: any[] = PokerHand.winners(solved);
+
+    if (winners.length === 1) {
+      // Single winner
+      const winIdx = solved.indexOf(winners[0]);
+      wins[winIdx]++;
+    } else {
+      // Tie — all winners share the pot
+      winners.forEach((w: any) => {
+        const idx = solved.indexOf(w);
+        ties[idx]++;
+      });
+    }
+  }
+
+  return hands.map((_, i) => ({
+    winPercentage: parseFloat(((wins[i] / iterations) * 100).toFixed(1)),
+    drawPercentage: parseFloat(((ties[i] / iterations) * 100).toFixed(1)),
+  }));
+}

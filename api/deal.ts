@@ -33,7 +33,7 @@ import { applyCors, handleOptions } from './_lib/cors';
 import { authenticate } from './_lib/auth';
 import { BettingStage, HandStatus } from './_lib/enums';
 import { HedgeEmHandOdds } from './_lib/types';
-import { shuffleDeck } from './_lib/utils';
+import { shuffleDeck, calculatePreFlopOdds } from './_lib/utils';
 
 const MIN_HANDS = 2;
 const MAX_HANDS = 6;
@@ -49,13 +49,7 @@ export interface DealResponse {
   remainingDeck: string[];
 }
 
-// poker-odds-calculator is pure ESM. Vercel compiles TS to CommonJS, so a static
-// import would become require() at runtime and throw ERR_REQUIRE_ESM.
-// Dynamic import() works in CommonJS and correctly loads the ESM module.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type OddsLib = { OddsCalculator: any; CardGroup: any };
-
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+export default function handler(req: VercelRequest, res: VercelResponse): void {
   applyCors(res);
   if (handleOptions(req, res)) return;
 
@@ -95,31 +89,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // Cards not yet in play — available for the flop (3), turn (1), river (1)
   const remainingDeck = deck.slice(numberOfHands * 2);
 
-  // Calculate pre-flop win and tie percentages via Monte Carlo simulation
-  // poker-odds-calculator runs 100,000 iterations by default (OddsCalculator.DEFAULT_ITERATIONS)
-  const { OddsCalculator, CardGroup } = await import('poker-odds-calculator') as OddsLib;
-  const cardGroups = hands.map((h: string) => CardGroup.fromString(h));
-  const result = OddsCalculator.calculate(cardGroups);
+  // Calculate pre-flop win and tie percentages via Monte Carlo simulation (10k iterations).
+  // Uses pokersolver (CJS) — avoids the ERR_REQUIRE_ESM problem that poker-odds-calculator
+  // causes when Vercel bundles TypeScript to CommonJS. Strategic replacement: HEDGE-43.
+  const oddsResults = calculatePreFlopOdds(hands);
 
-  // Find the index of the hand with the highest win equity (marks it as favourite)
-  const equities = result.equities;
+  // Find the hand with the highest win equity — marked IN_PLAY_FAVOURITE
   let favouriteIndex = 0;
   let highestEquity = -1;
   for (let i = 0; i < numberOfHands; i++) {
-    const eq = equities[i].getEquity();
-    if (eq > highestEquity) {
-      highestEquity = eq;
+    if (oddsResults[i].winPercentage > highestEquity) {
+      highestEquity = oddsResults[i].winPercentage;
       favouriteIndex = i;
     }
   }
 
   // Build HedgeEmHandOdds array — shape matches the handOdds field in HedgeEmGameState
   const handOdds: HedgeEmHandOdds[] = hands.map((_, i) => {
-    const winPct = parseFloat(equities[i].getEquity().toFixed(1));
-    const tiePct = parseFloat(equities[i].getTiePercentage().toFixed(1));
+    const { winPercentage, drawPercentage } = oddsResults[i];
     // Decimal odds: how much you get back per unit bet (including stake)
-    // e.g. 62% win → 1 / 0.62 = 1.61. Guard against 0% to avoid divide-by-zero.
-    const odds = winPct > 0 ? parseFloat((100 / winPct).toFixed(2)) : 0;
+    // e.g. 62% win → 100/62 = 1.61. Guard against 0% to avoid divide-by-zero.
+    const odds = winPercentage > 0 ? parseFloat((100 / winPercentage).toFixed(2)) : 0;
     const handStatus = i === favouriteIndex
       ? HandStatus.IN_PLAY_FAVOURITE
       : HandStatus.IN_PLAY_BETTING_STAGE_ACTIVE;
@@ -128,8 +118,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       handIndex: i,
       bettingStage: BettingStage.HOLE,
       handStatus,
-      winPercentage: winPct,
-      drawPercentage: tiePct,
+      winPercentage,
+      drawPercentage,
       odds,
     };
   });
