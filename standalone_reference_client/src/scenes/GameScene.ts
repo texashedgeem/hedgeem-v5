@@ -49,6 +49,9 @@ export class GameScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private dataSourceText!: Phaser.GameObjects.Text;
 
+  // Debug mode: activated via ?debug=1 in the URL. Shows stage labels, data source, diagnostics.
+  private readonly debugMode: boolean = new URLSearchParams(window.location.search).has('debug');
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -111,8 +114,8 @@ export class GameScene extends Phaser.Scene {
       this.imgCard[8 + c].setPosition(communityXs[c], communityY);
     }
 
-    // Deal button — centred, circular sprite
-    this.dealBtn = this.add.image(width / 2, height - 55, 'dealbutton')
+    // Deal button — right side, lower (matches JS client landscape: x=960, y=520 on 1024×640)
+    this.dealBtn = this.add.image(960, 520, 'dealbutton')
       .setDisplaySize(90, 90)
       .setInteractive({ useHandCursor: true })
       .setDepth(4);
@@ -120,8 +123,9 @@ export class GameScene extends Phaser.Scene {
     this.dealBtn.on('pointerover', () => this.dealBtn.setTint(0xddddff));
     this.dealBtn.on('pointerout',  () => this.dealBtn.clearTint());
 
-    // Advance button — circular green sprite on the right side (mirrors deal button position)
-    this.advanceBtn = this.add.image(width - 55, height - 55, 'dealbutton')
+    // Advance button — right side, mid (matches JS client buttonRight landscape: x=874, y=290)
+    // Uses green-tinted dealbutton sprite as placeholder until rightbutton.png asset is sourced (HEDGE-73)
+    this.advanceBtn = this.add.image(874, 290, 'dealbutton')
       .setDisplaySize(90, 90)
       .setTint(0x40c040)
       .setInteractive({ useHandCursor: true })
@@ -145,15 +149,15 @@ export class GameScene extends Phaser.Scene {
     this.totalBetText = this.add.text(width / 2, barY, '£0.00', valueStyle).setOrigin(0.5).setDepth(4);
     this.winText      = this.add.text(width - 80, barY, '£0.00', valueStyle).setOrigin(0.5).setDepth(4);
 
-    // Status + data source
+    // Status + data source — debug mode only (?debug=1)
     this.statusText = this.add.text(width / 2, 18, "Texas Hedge'Em", {
       fontSize: '16px', color: '#f0c040', fontFamily: 'monospace',
       stroke: '#000000', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(4);
+    }).setOrigin(0.5).setDepth(4).setVisible(this.debugMode);
 
     this.dataSourceText = this.add.text(width - 10, 8, '', {
       fontSize: '11px', color: '#88ff88', fontFamily: 'monospace',
-    }).setOrigin(1, 0).setDepth(4);
+    }).setOrigin(1, 0).setDepth(4).setVisible(this.debugMode);
   }
 
   // ----------------------------------------------------------------
@@ -189,7 +193,7 @@ export class GameScene extends Phaser.Scene {
       this.engine.resolveBets();
       this.advanceBtn.setVisible(false);
       this.dealBtn.setVisible(true);
-      this.statusText.setText('Game Over — press DEAL');
+      if (this.debugMode) this.statusText.setText('Game Over — press DEAL');
       this._renderCredits();
     }
   }
@@ -200,9 +204,11 @@ export class GameScene extends Phaser.Scene {
 
   private _render(): void {
     const snap = this.engine.snapshot();
-    const stageNames = ['HOLE', 'FLOP', 'TURN', 'RIVER'];
-    this.statusText.setText(stageNames[snap.dealStatus] ?? 'DEAL');
-    this.dataSourceText.setText(snap.isLiveData ? '● API' : '○ Local');
+    if (this.debugMode) {
+      const stageNames = ['HOLE', 'FLOP', 'TURN', 'RIVER'];
+      this.statusText.setText(stageNames[snap.dealStatus] ?? 'DEAL');
+      this.dataSourceText.setText(snap.isLiveData ? '● API' : '○ Local');
+    }
 
     this._renderCards(snap.dealStatus);
     this._renderHandPanels(snap);
