@@ -41,7 +41,7 @@ export class GameScene extends Phaser.Scene {
   private advanceBtn!: Phaser.GameObjects.Image;
 
   // Text overlays
-  private oddsTexts: Phaser.GameObjects.Text[] = [];
+  private oddsTexts: Phaser.GameObjects.BitmapText[] = [];
   private handDescTexts: Phaser.GameObjects.Text[] = [];
   private creditsText!: Phaser.GameObjects.Text;
   private totalBetText!: Phaser.GameObjects.Text;
@@ -85,11 +85,9 @@ export class GameScene extends Phaser.Scene {
       this.imgDeadHand[i] = this.add.image(x, handPanelY, 'deadhand')
         .setVisible(false).setDepth(2);
 
-      // Odds text (over hand panel) — gold/yellow matching JS client display
-      this.oddsTexts[i] = this.add.text(x, handPanelY - 10, '', {
-        fontSize: '20px', color: '#f0c040', fontFamily: 'monospace',
-        stroke: '#000000', strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(3).setVisible(false);
+      // Odds bitmap text — uses handfont.png matching JS client (size 50 landscape)
+      this.oddsTexts[i] = this.add.bitmapText(x, handPanelY - 35, 'handfont', '', 50)
+        .setOrigin(0.5).setDepth(3).setVisible(false);
 
       // Hand description (below odds)
       this.handDescTexts[i] = this.add.text(x, handPanelY + 22, '', {
@@ -288,13 +286,13 @@ export class GameScene extends Phaser.Scene {
       this.handDescTexts[i].setVisible(true);
 
       if (winner) {
-        this.oddsTexts[i].setText('WINNER').setColor('#00ff88');
+        this.oddsTexts[i].setText('WIN').setTint(0x00ff88);
         this.handDescTexts[i].setText(info?.handDescShort ?? '');
       } else if (dead) {
-        this.oddsTexts[i].setText('DEAD').setColor('#ff4444');
+        this.oddsTexts[i].setText('DEAD').setTint(0xff4444);
         this.handDescTexts[i].setText('');
       } else if (info) {
-        this.oddsTexts[i].setText(`×${info.oddsRounded.toFixed(1)}`).setColor('#f0c040');
+        this.oddsTexts[i].setText(`x${info.oddsRounded.toFixed(1)}`).setTint(0xffffff);
         this.handDescTexts[i].setText(info.handDescShort);
       }
     }

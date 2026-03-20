@@ -27,6 +27,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('deadhand', 'deadhand.png');
     this.load.image('cantlose', 'cantlose.png');
     this.load.image('chips', 'chips.png');
+    // Bitmap font used by JS client for odds multiplier display
+    this.load.bitmapFont('handfont', 'handfont.png', 'handfont.xml');
   }
 
   create(): void {
