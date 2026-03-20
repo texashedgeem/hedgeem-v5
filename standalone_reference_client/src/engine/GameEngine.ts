@@ -133,7 +133,7 @@ export class GameEngine {
   // ----------------------------------------------------------------
 
   /** Returns the game state enum for a given deal status (0=hole…3=river) */
-  private _gameStateForStatus(status: number): number {
+  _gameStateForStatus(status: number): number {
     const states = [
       GameStateEnum.STATUS_HOLE,
       GameStateEnum.STATUS_FLOP,
