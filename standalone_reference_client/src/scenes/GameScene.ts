@@ -337,7 +337,10 @@ export class GameScene extends Phaser.Scene {
         // this.handDescTexts[i].setText('');  // HEDGE-85
       } else if (info) {
         // In play: show handfont BitmapText odds, hide WIN label
-        this.oddsTexts[i].setText(`x${info.oddsRounded.toFixed(1)}`).setTint(0xffffff).setVisible(true);
+        // HEDGE-86: suppress trailing .0 for whole numbers (x5 not x5.0)
+        const odds = info.oddsRounded;
+        const oddsStr = Number.isInteger(odds) ? `x${odds}` : `x${odds.toFixed(1)}`;
+        this.oddsTexts[i].setText(oddsStr).setTint(0xffffff).setVisible(true);
         this.winTexts[i].setVisible(false);
         // this.handDescTexts[i].setText(info.handDescShort);  // HEDGE-85
       }
