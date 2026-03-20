@@ -74,7 +74,9 @@ export class GameScene extends Phaser.Scene {
   private advanceBtn!: Phaser.GameObjects.Sprite;
 
   // Text overlays
-  private oddsTexts: Phaser.GameObjects.BitmapText[] = [];
+  // NOTE: Previously BitmapText (handfont) — switched to Text because handfont lacks W/I/N/D/E/A
+  // characters needed for WIN/DEAD labels. HEDGE-84 tracks restoring proper bitmap font styling.
+  private oddsTexts: Phaser.GameObjects.Text[] = [];
   private handDescTexts: Phaser.GameObjects.Text[] = [];
   private creditsText!: Phaser.GameObjects.Text;
   private totalBetText!: Phaser.GameObjects.Text;
@@ -94,7 +96,9 @@ export class GameScene extends Phaser.Scene {
     this.api = new ApiClient();
 
     this._buildUI();
-    this.api.prefetch(NUMBER_OF_HANDS);
+    // API prefetch disabled — data source is in-app coredata by default.
+    // Enable via the config options page when HEDGE-82 / HEDGE-83 are implemented.
+    // this.api.prefetch(NUMBER_OF_HANDS);
   }
 
   // ----------------------------------------------------------------
@@ -117,11 +121,16 @@ export class GameScene extends Phaser.Scene {
       this.imgDeadHand[i] = this.add.image(x, y, 'deadhand')
         .setVisible(false).setDepth(2);
 
-      // Odds bitmap text — uses handfont matching JS client, positioned above hand panel
-      this.oddsTexts[i] = this.add.bitmapText(x, y - 35, 'handfont', '', 50)
-        .setOrigin(0.5).setDepth(3).setVisible(false);
+      // Odds text — bold white, positioned above hand panel.
+      // Uses regular Text (not BitmapText) because handfont lacks letters needed for WIN/DEAD.
+      // HEDGE-84: restore handfont bitmap styling once a font with full charset is sourced.
+      this.oddsTexts[i] = this.add.text(x, y - 35, '', {
+        fontSize: '36px', color: '#ffffff', fontFamily: 'Arial Black, sans-serif',
+        stroke: '#000000', strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(3).setVisible(false);
 
-      // Hand description (below odds)
+      // Hand description (below odds) — disabled pending HEDGE-85 config option.
+      // Re-enable by restoring setVisible(true) in _renderHandPanels when config flag is added.
       this.handDescTexts[i] = this.add.text(x, y + 22, '', {
         fontSize: '11px', color: '#ffe080', fontFamily: 'monospace',
         stroke: '#000000', strokeThickness: 2,
@@ -198,12 +207,9 @@ export class GameScene extends Phaser.Scene {
     this.advanceBtn.setVisible(false);
     this.statusText.setText('Dealing…');
 
-    const apiRecord = await this.api.getNextDeal(NUMBER_OF_HANDS);
-    if (apiRecord) {
-      this.engine.loadApiGame(apiRecord);
-    } else {
-      this.engine.loadLocalGame();
-    }
+    // Always use local coredata — API data source disabled until HEDGE-83 config option lands.
+    this.engine.loadLocalGame();
+    // this.api.prefetch(NUMBER_OF_HANDS); — also disabled
 
     this.engine.advance(); // → hole stage
     this.api.prefetch(NUMBER_OF_HANDS);
@@ -223,7 +229,8 @@ export class GameScene extends Phaser.Scene {
       this.advanceBtn.setVisible(false);
       this.dealBtn.setVisible(true);
       if (this.debugMode) this.statusText.setText('Game Over — press DEAL');
-      this._renderCredits();
+      // Re-render after resolveBets so WINNER/DEAD states are shown
+      this._render();
     }
   }
 
@@ -304,22 +311,25 @@ export class GameScene extends Phaser.Scene {
 
       const info = snap.handStageInfo[i];
       const dead   = this.engine.isHandDead(i);
-      const winner = this.engine.isHandWinner(i);
+      // Only show WIN at game-over — statusIsWinner:true in coredata is a mid-game prediction,
+      // not the result. Showing it mid-game would spoil the outcome before river.
+      const winner = this.engine.isGameOver && this.engine.isHandWinner(i);
 
       this.imgDeadHand[i].setVisible(dead);
 
       this.oddsTexts[i].setVisible(true);
-      this.handDescTexts[i].setVisible(true);
+      // HEDGE-85: hand descriptions hidden pending config option — restore setVisible(true) when implemented
+      // this.handDescTexts[i].setVisible(true);
 
       if (winner) {
-        this.oddsTexts[i].setText('WIN').setTint(0x00ff88);
-        this.handDescTexts[i].setText(info?.handDescShort ?? '');
+        this.oddsTexts[i].setText('WIN').setColor('#00ff88');
+        // this.handDescTexts[i].setText(info?.handDescShort ?? '');  // HEDGE-85
       } else if (dead) {
-        this.oddsTexts[i].setText('DEAD').setTint(0xff4444);
-        this.handDescTexts[i].setText('');
+        this.oddsTexts[i].setText('').setColor('#ffffff'); // skull image handles DEAD display
+        // this.handDescTexts[i].setText('');  // HEDGE-85
       } else if (info) {
-        this.oddsTexts[i].setText(`x${info.oddsRounded.toFixed(1)}`).setTint(0xffffff);
-        this.handDescTexts[i].setText(info.handDescShort);
+        this.oddsTexts[i].setText(`x${info.oddsRounded.toFixed(1)}`).setColor('#ffffff');
+        // this.handDescTexts[i].setText(info.handDescShort);  // HEDGE-85
       }
     }
   }
