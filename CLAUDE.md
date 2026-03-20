@@ -51,10 +51,22 @@ Planning and early development phase. Three prior versions being revived and ana
 
 ## Current Focus
 
-**Next: HEDGE-31** — Port Phase 2 (Auth endpoints)
-Last done: api/deal.ts — tactical deal endpoint (shuffle + 4-hand deal + pre-flop odds via poker-odds-calculator). HEDGE-43 created for UMA C++ sidecar (strategic odds path).
-Simon actions pending: none.
+**Next: HEDGE-50** — Betting UI (chips, denomination cycling, bet placement, cancel)
+Last done (2026-03-20): standalone_reference_client rendering sprint — correct table/cards/positions, WIN/DEAD display, odds updating per stage, API disabled (HEDGE-83), hand descriptions hidden (HEDGE-85). 9 Playwright smoke tests passing.
+Simon actions pending: (1) Provide SQLite DB file (HEDGE-29).
 Mintlify: live at https://hedgeem-api.qeetoto.com/introduction — dashboard.mintlify.com/qeetoto/qeetoto — monorepo path: mintlify-docs/
+
+### Outstanding UI tickets (always show in session-start report)
+| Key | Priority | Summary |
+|---|---|---|
+| HEDGE-50 | High | Betting UI — chips, denomination cycling, bet placement, cancel |
+| HEDGE-78 | Medium | Menu and help screens — top-right navigation |
+| HEDGE-79 | Medium | Config button — fix on JS site first, then port |
+| HEDGE-82 | Medium | Config options page (parent of HEDGE-83, HEDGE-85) |
+| HEDGE-73 | Medium | 3D card perspective (skewX) |
+| HEDGE-80 | Medium | Configurable hand count (2–4 UI, 23 backend max) |
+| HEDGE-70 | Low | Portrait/landscape responsive layout |
+| HEDGE-84 | Low | Restore handfont bitmap styling for odds |
 
 ## Claude Behaviour Standards
 
