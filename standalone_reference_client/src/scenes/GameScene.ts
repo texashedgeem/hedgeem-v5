@@ -29,6 +29,39 @@ const CARD_H = 100;
 const TINT_LIVE = 0xffffff;
 const TINT_DEAD = 0x7f7f7f;
 
+// Exact felt positions sourced from HedgeEmJavaScriptClient/odobo/src/js/hands.js
+// Non-mobile landscape theme (the live site at hedgeem.qeetoto.com).
+// Hole cards: cards 1-8 (1-indexed JS), mapped to imgCard[0-7] (0-indexed here).
+// Community cards 9-13 → imgCard[8-12]. SkewX is the Phaser 2 3D effect — applied in HEDGE-73.
+const CARD_POSITIONS = [
+  // Hand 1
+  { x: 287, y: 329, angle:  8 },   // imgCard[0]
+  { x: 323, y: 334, angle:  8 },   // imgCard[1]
+  // Hand 2
+  { x: 422, y: 345, angle:  3.5 }, // imgCard[2]
+  { x: 460, y: 347, angle:  3.5 }, // imgCard[3]
+  // Hand 3
+  { x: 564, y: 347, angle: -3.5 }, // imgCard[4]
+  { x: 602, y: 345, angle: -3.5 }, // imgCard[5]
+  // Hand 4 (hidden in 3-handed mode)
+  { x: 701, y: 334, angle: -8 },   // imgCard[6]
+  { x: 738, y: 329, angle: -8 },   // imgCard[7]
+  // Community cards (flop/turn/river) — smaller (67×83), no angle
+  { x: 333, y: 157, angle: 0 },    // imgCard[8]  flop 1
+  { x: 404, y: 157, angle: 0 },    // imgCard[9]  flop 2
+  { x: 476, y: 157, angle: 0 },    // imgCard[10] flop 3
+  { x: 584, y: 157, angle: 0 },    // imgCard[11] turn
+  { x: 691, y: 157, angle: 0 },    // imgCard[12] river
+];
+
+// Hand panel centre positions (landscape, from handPosition non-mobile landscape in hands.js)
+const HAND_POSITIONS = [
+  { x: 304, y: 331 }, // hand 1
+  { x: 440, y: 346 }, // hand 2
+  { x: 584, y: 346 }, // hand 3
+  { x: 725, y: 331 }, // hand 4 (hidden in 3-handed mode)
+];
+
 export class GameScene extends Phaser.Scene {
   private engine!: GameEngine;
   private api!: ApiClient;
@@ -75,41 +108,38 @@ export class GameScene extends Phaser.Scene {
     // matching how the JS client renders tablel_hedgeem_blue.png (no scaling, anchor 0.5).
     this.add.image(512, 320, 'table');
 
-    // Hand panel images (one per hand) — positioned across the lower half
-    const handPanelY = 390;
+    // Hand panel images — exact felt positions from JS client handPosition landscape
     for (let i = 0; i < NUMBER_OF_HANDS; i++) {
-      const x = this._handCentreX(i);
-      this.imgHand[i] = this.add.image(x, handPanelY, `hand${i + 1}`).setVisible(false);
+      const { x, y } = HAND_POSITIONS[i];
+      this.imgHand[i] = this.add.image(x, y, `hand${i + 1}`).setVisible(false);
 
-      // Dead hand skull overlay
-      this.imgDeadHand[i] = this.add.image(x, handPanelY, 'deadhand')
+      // Dead hand skull overlay — same position as hand panel
+      this.imgDeadHand[i] = this.add.image(x, y, 'deadhand')
         .setVisible(false).setDepth(2);
 
-      // Odds bitmap text — uses handfont.png matching JS client (size 50 landscape)
-      this.oddsTexts[i] = this.add.bitmapText(x, handPanelY - 35, 'handfont', '', 50)
+      // Odds bitmap text — uses handfont matching JS client, positioned above hand panel
+      this.oddsTexts[i] = this.add.bitmapText(x, y - 35, 'handfont', '', 50)
         .setOrigin(0.5).setDepth(3).setVisible(false);
 
       // Hand description (below odds)
-      this.handDescTexts[i] = this.add.text(x, handPanelY + 22, '', {
+      this.handDescTexts[i] = this.add.text(x, y + 22, '', {
         fontSize: '11px', color: '#ffe080', fontFamily: 'monospace',
         stroke: '#000000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(3).setVisible(false);
     }
 
     // 13 card sprites: cards 0-7 = hole cards (2 per hand), 8-12 = community
+    // Positioned at their felt positions immediately; community cards are smaller (67×83)
     for (let c = 0; c < 13; c++) {
-      const sprite = this.add.sprite(0, 0, 'cards', 52)
-        .setDisplaySize(CARD_W, CARD_H)
+      const pos = CARD_POSITIONS[c];
+      const w = c >= 8 ? 67 : CARD_W;
+      const h = c >= 8 ? 83 : CARD_H;
+      const sprite = this.add.sprite(pos.x, pos.y, 'cards', 52)
+        .setDisplaySize(w, h)
+        .setAngle(pos.angle)
         .setVisible(false)
         .setDepth(1);
       this.imgCard[c] = sprite;
-    }
-
-    // Community card positions (centred, landscape)
-    const communityY = 230;
-    const communityXs = [310, 400, 490, 580, 670];
-    for (let c = 0; c < 5; c++) {
-      this.imgCard[8 + c].setPosition(communityXs[c], communityY);
     }
 
     // Deal button — right side, lower (matches JS client landscape: x=960, y=520 on 1024×640)
@@ -219,11 +249,9 @@ export class GameScene extends Phaser.Scene {
 
     for (let c = 0; c < nHands * 2; c++) {
       const hand = Math.floor(c / 2);
-      const cardInHand = c % 2;
-      const x = this._handCentreX(hand) + (cardInHand === 0 ? -20 : 20);
-      const y = 310;
       const sprite = this.imgCard[c];
-      sprite.setPosition(x, y).setVisible(true);
+      // Position already set from CARD_POSITIONS in _buildUI — just show the card
+      sprite.setVisible(true);
 
       // JS client: only Hand 1 (index 0) is revealed face-up at hole stage.
       // All other hands show card back until they are dealt in subsequent states.
@@ -259,14 +287,11 @@ export class GameScene extends Phaser.Scene {
 
     for (let c = 0; c < 5; c++) {
       const sprite = this.imgCard[8 + c];
-      if (revealed === 0) {
-        // All community cards face-down at hole stage
-        sprite.setFrame(52).setTint(TINT_LIVE).setVisible(true);
-      } else if (c < revealed) {
-        sprite.setFrame(4 * cards[8 + c].rank + cards[8 + c].suit)
-              .setTint(TINT_LIVE).setVisible(true);
+      // Position/angle already set from CARD_POSITIONS — just update frame visibility
+      if (c < revealed) {
+        sprite.setFrame(4 * cards[8 + c].rank + cards[8 + c].suit).setTint(TINT_LIVE).setVisible(true);
       } else {
-        // Not yet revealed — still show face-down (not hidden)
+        // Not yet revealed (or hole stage) — show face-down card back
         sprite.setFrame(52).setTint(TINT_LIVE).setVisible(true);
       }
     }
@@ -314,11 +339,4 @@ export class GameScene extends Phaser.Scene {
   // Helpers
   // ----------------------------------------------------------------
 
-  /** Horizontal centre of hand i, evenly spaced across the canvas */
-  private _handCentreX(i: number): number {
-    const { width } = this.scale;
-    const n = this.engine ? this.engine.getNumberOfHands() : NUMBER_OF_HANDS;
-    const spacing = width / (n + 1);
-    return spacing * (i + 1);
-  }
 }
