@@ -70,8 +70,8 @@ export class GameScene extends Phaser.Scene {
   private imgCard: Phaser.GameObjects.Sprite[] = [];
   private imgHand: Phaser.GameObjects.Image[] = [];
   private imgDeadHand: Phaser.GameObjects.Image[] = [];
-  private dealBtn!: Phaser.GameObjects.Image;
-  private advanceBtn!: Phaser.GameObjects.Image;
+  private dealBtn!: Phaser.GameObjects.Sprite;
+  private advanceBtn!: Phaser.GameObjects.Sprite;
 
   // Text overlays
   private oddsTexts: Phaser.GameObjects.BitmapText[] = [];
@@ -142,8 +142,9 @@ export class GameScene extends Phaser.Scene {
       this.imgCard[c] = sprite;
     }
 
-    // Deal button — right side, lower (matches JS client landscape: x=960, y=520 on 1024×640)
-    this.dealBtn = this.add.image(960, 520, 'dealbutton')
+    // Deal button — frame 0 of spritesheet (256×256 = 2×2 grid of 128×128 frames)
+    // Right side, lower — matches JS client landscape: x=960, y=520 on 1024×640
+    this.dealBtn = this.add.sprite(960, 520, 'dealbutton', 0)
       .setDisplaySize(90, 90)
       .setInteractive({ useHandCursor: true })
       .setDepth(4);
@@ -151,9 +152,9 @@ export class GameScene extends Phaser.Scene {
     this.dealBtn.on('pointerover', () => this.dealBtn.setTint(0xddddff));
     this.dealBtn.on('pointerout',  () => this.dealBtn.clearTint());
 
-    // Advance button — right side, mid (matches JS client buttonRight landscape: x=874, y=290)
-    // Uses green-tinted dealbutton sprite as placeholder until rightbutton.png asset is sourced (HEDGE-73)
-    this.advanceBtn = this.add.image(874, 290, 'dealbutton')
+    // Advance button — right side, mid — matches JS client buttonRight landscape: x=874, y=290
+    // Uses frame 0 of dealbutton spritesheet with green tint as placeholder (rightbutton.png not yet sourced)
+    this.advanceBtn = this.add.sprite(874, 290, 'dealbutton', 0)
       .setDisplaySize(90, 90)
       .setTint(0x40c040)
       .setInteractive({ useHandCursor: true })
