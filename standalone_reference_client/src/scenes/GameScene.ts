@@ -27,11 +27,10 @@ const INITIAL_CREDITS = 10_000;
 // flat and as wide as hole cards if given the same size — using desktop sizes as interim fix.
 const CARD_W = 107;   // hole: 71 × 1.5
 const CARD_H = 150;   // hole: 100 × 1.5
-// Community cards are displayed smaller than hole cards to approximate table depth.
-// Without skewX perspective (HEDGE-73), the "correct" mobile theme size (107×125) looks flat/fat.
-// 67×83 (desktop theme) is used as an interim size pending HEDGE-73 implementation.
-const COMM_W = 67;
-const COMM_H = 83;
+// Community cards — larger than desktop theme (67×83) but smaller than hole cards.
+// Pending skewX perspective (HEDGE-73); interim size to fill felt outline at top of table.
+const COMM_W = 90;
+const COMM_H = 112;
 
 // Tint values matching the original JS client
 const TINT_LIVE = 0xffffff;
