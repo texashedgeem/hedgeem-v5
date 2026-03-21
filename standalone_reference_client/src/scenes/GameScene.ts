@@ -21,54 +21,99 @@ const NUMBER_OF_HANDS = 3;
 // Starting credits £100.00 — stored as pence (10000p) for integer arithmetic, displayed as £x.xx
 const INITIAL_CREDITS = 10_000;
 
-// Card display size — scaled by CARD_SCALE_FACTOR=1.5 from JS client hands.js
-// Hole cards: 71×100 source → 107×150 display
-// Community cards: 71×83 source → 107×125 display
-const CARD_W = 107;
-const CARD_H = 150;
-const COMM_W = 107;
-const COMM_H = 125;
+// Card display size — hole cards use mobile theme (CARD_SCALE_FACTOR=1.5, live JS client)
+// Community cards use desktop theme sizes (67×83): they sit at the "far" end of the table
+// and should appear smaller than hole cards. Without skewX perspective (HEDGE-73) they look
+// flat and as wide as hole cards if given the same size — using desktop sizes as interim fix.
+const CARD_W = 107;   // hole: 71 × 1.5
+const CARD_H = 150;   // hole: 100 × 1.5
+const COMM_W = 67;    // community: desktop width (designed for these positions)
+const COMM_H = 83;    // community: desktop height
 
 // Tint values matching the original JS client
 const TINT_LIVE = 0xffffff;
 const TINT_DEAD = 0x7f7f7f;
 
-// Exact felt positions sourced from HedgeEmJavaScriptClient/odobo/src/js/hands.js
-// Non-mobile landscape theme (the live site at hedgeem.qeetoto.com).
-// Hole cards: cards 1-8 (1-indexed JS), mapped to imgCard[0-7] (0-indexed here).
-// Community cards 9-13 → imgCard[8-12]. SkewX is the Phaser 2 3D effect — applied in HEDGE-73.
-const CARD_POSITIONS = [
+// ----------------------------------------------------------------
+// Layout tables — mobile theme from HedgeEmJavaScriptClient/odobo/src/js/hands.js
+// Landscape: 1024×640 design space. Portrait: 640×1024 design space.
+// SkewX (3D perspective) not applied here — tracked in HEDGE-73.
+// ----------------------------------------------------------------
+
+// LANDSCAPE (1024×640)
+// Card positions: mobile theme (hands.js THEME=='mobile', cardPosition landscape)
+// Hand positions: mobile theme (hands.js handPosition landscape)
+const L_CARD_POSITIONS = [
   // Hand 1
-  { x: 287, y: 329, angle:  8 },   // imgCard[0]
-  { x: 323, y: 334, angle:  8 },   // imgCard[1]
+  { x: 203, y: 376, angle:  8 },   // imgCard[0]
+  { x: 256, y: 383, angle:  8 },   // imgCard[1]
   // Hand 2
-  { x: 422, y: 345, angle:  3.5 }, // imgCard[2]
-  { x: 460, y: 347, angle:  3.5 }, // imgCard[3]
+  { x: 394, y: 400, angle:  3.5 }, // imgCard[2]
+  { x: 446, y: 403, angle:  3.5 }, // imgCard[3]
   // Hand 3
-  { x: 564, y: 347, angle: -3.5 }, // imgCard[4]
-  { x: 602, y: 345, angle: -3.5 }, // imgCard[5]
+  { x: 590, y: 401, angle: -3.5 }, // imgCard[4]
+  { x: 640, y: 398, angle: -3.5 }, // imgCard[5]
   // Hand 4 (hidden in 3-handed mode)
-  { x: 701, y: 334, angle: -8 },   // imgCard[6]
-  { x: 738, y: 329, angle: -8 },   // imgCard[7]
-  // Community cards (flop/turn/river) — smaller (67×83), no angle
-  { x: 333, y: 157, angle: 0 },    // imgCard[8]  flop 1
-  { x: 404, y: 157, angle: 0 },    // imgCard[9]  flop 2
-  { x: 476, y: 157, angle: 0 },    // imgCard[10] flop 3
-  { x: 584, y: 157, angle: 0 },    // imgCard[11] turn
-  { x: 691, y: 157, angle: 0 },    // imgCard[12] river
+  { x: 780, y: 384, angle: -8 },   // imgCard[6]
+  { x: 830, y: 376, angle: -8 },   // imgCard[7]
+  // Community cards — mobile theme y=136
+  { x: 270, y: 136, angle: 0 },    // imgCard[8]  flop 1
+  { x: 375, y: 136, angle: 0 },    // imgCard[9]  flop 2
+  { x: 475, y: 136, angle: 0 },    // imgCard[10] flop 3
+  { x: 624, y: 136, angle: 0 },    // imgCard[11] turn
+  { x: 780, y: 136, angle: 0 },    // imgCard[12] river
+];
+const L_HAND_POSITIONS = [
+  { x: 225, y: 380 }, // hand 1
+  { x: 425, y: 400 }, // hand 2
+  { x: 620, y: 400 }, // hand 3
+  { x: 805, y: 380 }, // hand 4 (hidden in 3-handed mode)
 ];
 
-// Hand panel centre positions (landscape, from handPosition non-mobile landscape in hands.js)
-const HAND_POSITIONS = [
-  { x: 304, y: 331 }, // hand 1
-  { x: 440, y: 346 }, // hand 2
-  { x: 584, y: 346 }, // hand 3
-  { x: 725, y: 331 }, // hand 4 (hidden in 3-handed mode)
+// PORTRAIT (640×1024)
+// Hand positions from hands.js handPosition portrait (same for mobile and non-mobile themes).
+// Card positions derived from hand positions using portrait offsets from hands.js:
+//   card1: hand_x + 0,  hand_y + 55
+//   card2: hand_x + 30, hand_y + 75
+// Community cards placed at top of portrait table felt (centred on x=320).
+const P_HAND_POSITIONS = [
+  { x: 112, y: 411 }, // hand 1
+  { x: 248, y: 426 }, // hand 2
+  { x: 392, y: 426 }, // hand 3
+  { x: 528, y: 411 }, // hand 4 (hidden in 3-handed mode)
+];
+const P_CARD_POSITIONS = [
+  // Hand 1 (x=112, y=411)
+  { x: 112, y: 466, angle:  8 },   // imgCard[0]
+  { x: 142, y: 486, angle:  8 },   // imgCard[1]
+  // Hand 2 (x=248, y=426)
+  { x: 248, y: 481, angle:  3.5 }, // imgCard[2]
+  { x: 278, y: 501, angle:  3.5 }, // imgCard[3]
+  // Hand 3 (x=392, y=426)
+  { x: 392, y: 481, angle: -3.5 }, // imgCard[4]
+  { x: 422, y: 501, angle: -3.5 }, // imgCard[5]
+  // Hand 4 (x=528, y=411) — hidden in 3-handed mode
+  { x: 528, y: 466, angle: -8 },   // imgCard[6]
+  { x: 558, y: 486, angle: -8 },   // imgCard[7]
+  // Community cards — centred across 640px width, near top of portrait felt
+  { x: 160, y: 210, angle: 0 },    // imgCard[8]  flop 1
+  { x: 248, y: 210, angle: 0 },    // imgCard[9]  flop 2
+  { x: 336, y: 210, angle: 0 },    // imgCard[10] flop 3
+  { x: 448, y: 210, angle: 0 },    // imgCard[11] turn
+  { x: 560, y: 210, angle: 0 },    // imgCard[12] river
 ];
 
 export class GameScene extends Phaser.Scene {
   private engine!: GameEngine;
   private api!: ApiClient;
+
+  // Current layout (set in create, updated on orientation change)
+  private isPortrait!: boolean;
+  private cardPositions!: typeof L_CARD_POSITIONS;
+  private handPositions!: typeof L_HAND_POSITIONS;
+
+  // Window resize handler reference (for cleanup)
+  private _resizeHandler!: () => void;
 
   // Sprites
   private imgCard: Phaser.GameObjects.Sprite[] = [];
@@ -102,10 +147,46 @@ export class GameScene extends Phaser.Scene {
     this.engine = new GameEngine(NUMBER_OF_HANDS, INITIAL_CREDITS);
     this.api = new ApiClient();
 
+    // Detect orientation and select layout. The canvas base resolution was already
+    // set by main.ts (1024×640 landscape OR 640×1024 portrait) before Phaser booted,
+    // and is updated by _checkOrientation on subsequent rotations.
+    this.isPortrait = window.innerHeight > window.innerWidth;
+    this._applyLayout(this.isPortrait);
     this._buildUI();
+
+    // Listen for orientation changes and rebuild the layout when they occur.
+    this._resizeHandler = () => this._checkOrientation();
+    window.addEventListener('resize', this._resizeHandler);
+    this.events.once('shutdown', () => {
+      window.removeEventListener('resize', this._resizeHandler);
+    });
+
     // API prefetch disabled — data source is in-app coredata by default.
     // Enable via the config options page when HEDGE-82 / HEDGE-83 are implemented.
     // this.api.prefetch(NUMBER_OF_HANDS);
+  }
+
+  /** Select layout tables and resize the Phaser canvas for the given orientation. */
+  private _applyLayout(portrait: boolean): void {
+    this.isPortrait    = portrait;
+    this.cardPositions = portrait ? P_CARD_POSITIONS : L_CARD_POSITIONS;
+    this.handPositions = portrait ? P_HAND_POSITIONS : L_HAND_POSITIONS;
+    if (portrait) {
+      this.scale.resize(640, 1024);
+    } else {
+      this.scale.resize(1024, 640);
+    }
+  }
+
+  /** Called on every window resize; rebuilds the scene if orientation flipped. */
+  private _checkOrientation(): void {
+    const nowPortrait = window.innerHeight > window.innerWidth;
+    if (nowPortrait !== this.isPortrait) {
+      // Resize the Phaser canvas BEFORE restarting so main.ts initial detect aligns.
+      this._applyLayout(nowPortrait);
+      // scene.restart() re-runs create() fresh with new canvas dimensions.
+      this.scene.restart();
+    }
   }
 
   // ----------------------------------------------------------------
@@ -115,12 +196,13 @@ export class GameScene extends Phaser.Scene {
   private _buildUI(): void {
     const { width, height } = this.scale;
 
-    // Table background centred in the 1024×640 design canvas
-    this.add.image(512, 320, 'table');
+    // Table background — landscape or portrait variant, centred on the design canvas
+    const tableKey = this.isPortrait ? 'tablep' : 'table';
+    this.add.image(width / 2, height / 2, tableKey);
 
-    // Hand panel images — exact felt positions from JS client handPosition landscape
+    // Hand panel images — positions from current layout (landscape or portrait)
     for (let i = 0; i < NUMBER_OF_HANDS; i++) {
-      const { x, y } = HAND_POSITIONS[i];
+      const { x, y } = this.handPositions[i];
       this.imgHand[i] = this.add.image(x, y, `hand${i + 1}`).setVisible(false);
 
       // Dead hand skull overlay — same position as hand panel
@@ -132,12 +214,13 @@ export class GameScene extends Phaser.Scene {
         .setVisible(false).setDepth(2);
 
       // Odds BitmapText — handfont matches JS client, size 50. Handles x2.1, x40.0 etc.
-      this.oddsTexts[i] = this.add.bitmapText(x, y - 35, 'handfont', '', 50)
+      // Positioned above the top edge of hole cards (CARD_H/2 above hand centre, plus padding).
+      this.oddsTexts[i] = this.add.bitmapText(x, y - CARD_H / 2 - 20, 'handfont', '', 50)
         .setOrigin(0.5).setDepth(3).setVisible(false);
 
       // WIN label — regular Text because handfont lacks W/I/N characters.
       // Shown instead of oddsTexts at game-over when this hand wins.
-      this.winTexts[i] = this.add.text(x, y - 35, 'WIN', {
+      this.winTexts[i] = this.add.text(x, y - CARD_H / 2 - 20, 'WIN', {
         fontSize: '40px', color: '#00ff88', fontFamily: 'Arial Black, sans-serif',
         stroke: '#000000', strokeThickness: 5,
       }).setOrigin(0.5).setDepth(3).setVisible(false);
@@ -153,7 +236,7 @@ export class GameScene extends Phaser.Scene {
     // 13 card sprites: cards 0-7 = hole cards (2 per hand), 8-12 = community
     // Community cards use same width but shorter height (83 units vs 100 units, ×1.5 scale)
     for (let c = 0; c < 13; c++) {
-      const pos = CARD_POSITIONS[c];
+      const pos = this.cardPositions[c];
       const w = c >= 8 ? COMM_W : CARD_W;
       const h = c >= 8 ? COMM_H : CARD_H;
       this.imgCard[c] = this.add.sprite(pos.x, pos.y, 'cards', 52)
@@ -163,9 +246,14 @@ export class GameScene extends Phaser.Scene {
         .setDepth(1);
     }
 
+    // Deal and Advance button positions differ by orientation.
+    // Landscape: right side, matching JS client (x=960, y=520 on 1024×640).
+    // Portrait: bottom-right, within the 640-wide canvas.
+    const dealBtnPos    = this.isPortrait ? { x: 560, y: 940 } : { x: 960, y: 520 };
+    const advanceBtnPos = this.isPortrait ? { x: 400, y: 940 } : { x: 874, y: 290 };
+
     // Deal button — frame 0 of spritesheet (256×256 = 2×2 grid of 128×128 frames)
-    // Right side, lower — matches JS client landscape: x=960, y=520 on 1024×640
-    this.dealBtn = this.add.sprite(960, 520, 'dealbutton', 0)
+    this.dealBtn = this.add.sprite(dealBtnPos.x, dealBtnPos.y, 'dealbutton', 0)
       .setDisplaySize(90, 90)
       .setInteractive({ useHandCursor: true })
       .setDepth(4);
@@ -173,9 +261,9 @@ export class GameScene extends Phaser.Scene {
     this.dealBtn.on('pointerover', () => this.dealBtn.setTint(0xddddff));
     this.dealBtn.on('pointerout',  () => this.dealBtn.clearTint());
 
-    // Advance button — right side, mid — matches JS client buttonRight landscape: x=874, y=290
-    // Uses frame 0 of dealbutton spritesheet with green tint as placeholder (rightbutton.png not yet sourced)
-    this.advanceBtn = this.add.sprite(874, 290, 'dealbutton', 0)
+    // Advance button — uses frame 0 of dealbutton spritesheet with green tint as placeholder
+    // (rightbutton.png asset not yet sourced)
+    this.advanceBtn = this.add.sprite(advanceBtnPos.x, advanceBtnPos.y, 'dealbutton', 0)
       .setDisplaySize(90, 90)
       .setTint(0x40c040)
       .setInteractive({ useHandCursor: true })

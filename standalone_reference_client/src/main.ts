@@ -10,16 +10,20 @@ import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { GameScene } from './scenes/GameScene';
 
+// Initial canvas size — GameScene reconfigures this on orientation change.
+const isPortrait = window.innerHeight > window.innerWidth;
+
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 1024,
-  height: 640,
+  width:  isPortrait ? 640  : 1024,
+  height: isPortrait ? 1024 : 640,
   backgroundColor: '#1a1a2e',
   parent: 'game-container',
   scene: [BootScene, PreloadScene, GameScene],
   scale: {
-    // FIT: scales the 1024×640 canvas to fill the viewport while maintaining aspect ratio.
-    // All game coordinates stay in the 1024×640 design space; input and rendering are exact.
+    // FIT: canvas fills the viewport at the correct aspect ratio. GameScene swaps
+    // the base resolution (1024×640 ↔ 640×1024) on orientation change so that
+    // portrait and landscape layouts each use their own design coordinate space.
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
