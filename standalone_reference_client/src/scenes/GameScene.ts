@@ -70,6 +70,7 @@ export class GameScene extends Phaser.Scene {
   private imgCard: Phaser.GameObjects.Sprite[] = [];
   private imgHand: Phaser.GameObjects.Image[] = [];
   private imgDeadHand: Phaser.GameObjects.Image[] = [];
+  private imgCantLose: Phaser.GameObjects.Image[] = [];
   private dealBtn!: Phaser.GameObjects.Sprite;
   private advanceBtn!: Phaser.GameObjects.Sprite;
 
@@ -121,6 +122,10 @@ export class GameScene extends Phaser.Scene {
 
       // Dead hand skull overlay — same position as hand panel
       this.imgDeadHand[i] = this.add.image(x, y, 'deadhand')
+        .setVisible(false).setDepth(2);
+
+      // Can't-lose overlay — shown when statusCantLose:true (100% win, odds undefined)
+      this.imgCantLose[i] = this.add.image(x, y, 'cantlose')
         .setVisible(false).setDepth(2);
 
       // Odds BitmapText — handfont matches JS client, size 50. Handles x2.1, x40.0 etc.
@@ -315,12 +320,14 @@ export class GameScene extends Phaser.Scene {
       this.imgHand[i].setVisible(true);
 
       const info = snap.handStageInfo[i];
-      const dead   = this.engine.isHandDead(i);
+      const cantLose = this.engine.isHandCantLose(i);
+      const dead     = this.engine.isHandDead(i);
       // Only show WIN at game-over — statusIsWinner:true in coredata is a mid-game prediction,
       // not the result. Showing it mid-game would spoil the outcome before river.
       const winner = this.engine.isGameOver && this.engine.isHandWinner(i);
 
       this.imgDeadHand[i].setVisible(dead);
+      this.imgCantLose[i].setVisible(cantLose && !winner);
 
       // HEDGE-85: hand descriptions hidden pending config option — restore setVisible(true) when implemented
       // this.handDescTexts[i].setVisible(true);
@@ -330,6 +337,10 @@ export class GameScene extends Phaser.Scene {
         this.oddsTexts[i].setVisible(false);
         this.winTexts[i].setVisible(true);
         // this.handDescTexts[i].setText(info?.handDescShort ?? '');  // HEDGE-85
+      } else if (cantLose) {
+        // HEDGE-87: dead cert — cantlose.png image handles display, suppress odds (would show x0)
+        this.oddsTexts[i].setVisible(false);
+        this.winTexts[i].setVisible(false);
       } else if (dead) {
         // DEAD: skull image handles display — hide both text objects
         this.oddsTexts[i].setVisible(false);
