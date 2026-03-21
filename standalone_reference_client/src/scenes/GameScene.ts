@@ -21,9 +21,13 @@ const NUMBER_OF_HANDS = 3;
 // Starting credits £100.00 — stored as pence (10000p) for integer arithmetic, displayed as £x.xx
 const INITIAL_CREDITS = 10_000;
 
-// Card display size (scaled from 98×128 source)
-const CARD_W = 71;
-const CARD_H = 100;
+// Card display size — scaled by CARD_SCALE_FACTOR=1.5 from JS client hands.js
+// Hole cards: 71×100 source → 107×150 display
+// Community cards: 71×83 source → 107×125 display
+const CARD_W = 107;
+const CARD_H = 150;
+const COMM_W = 107;
+const COMM_H = 125;
 
 // Tint values matching the original JS client
 const TINT_LIVE = 0xffffff;
@@ -111,13 +115,8 @@ export class GameScene extends Phaser.Scene {
   private _buildUI(): void {
     const { width, height } = this.scale;
 
-    // Table background: 1384×1385 image centred at canvas midpoint.
-    // With Scale.EXPAND the canvas may be wider/taller than 1024×640 so we use
-    // width/2, height/2 rather than hardcoded 512,320 to keep it centred.
-    const table = this.add.image(width / 2, height / 2, 'table');
-    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
-      table.setPosition(gameSize.width / 2, gameSize.height / 2);
-    });
+    // Table background centred in the 1024×640 design canvas
+    this.add.image(512, 320, 'table');
 
     // Hand panel images — exact felt positions from JS client handPosition landscape
     for (let i = 0; i < NUMBER_OF_HANDS; i++) {
@@ -152,17 +151,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     // 13 card sprites: cards 0-7 = hole cards (2 per hand), 8-12 = community
-    // Positioned at their felt positions immediately; community cards are smaller (67×83)
+    // Community cards use same width but shorter height (83 units vs 100 units, ×1.5 scale)
     for (let c = 0; c < 13; c++) {
       const pos = CARD_POSITIONS[c];
-      const w = c >= 8 ? 67 : CARD_W;
-      const h = c >= 8 ? 83 : CARD_H;
-      const sprite = this.add.sprite(pos.x, pos.y, 'cards', 52)
+      const w = c >= 8 ? COMM_W : CARD_W;
+      const h = c >= 8 ? COMM_H : CARD_H;
+      this.imgCard[c] = this.add.sprite(pos.x, pos.y, 'cards', 52)
         .setDisplaySize(w, h)
         .setAngle(pos.angle)
         .setVisible(false)
         .setDepth(1);
-      this.imgCard[c] = sprite;
     }
 
     // Deal button — frame 0 of spritesheet (256×256 = 2×2 grid of 128×128 frames)

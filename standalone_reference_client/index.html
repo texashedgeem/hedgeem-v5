@@ -8,35 +8,9 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; background: #1a1a2e; overflow: hidden; }
     #game-container { width: 100%; height: 100%; }
-
-    /* Portrait overlay — shown on portrait viewports, hides game and prompts rotation */
-    #portrait-overlay {
-      display: none;
-      position: fixed; inset: 0; z-index: 999;
-      background: #1a1a2e;
-      flex-direction: column;
-      align-items: center; justify-content: center;
-      color: #f0c040; font-family: monospace; text-align: center; gap: 24px;
-    }
-    #portrait-overlay svg { width: 64px; height: 64px; animation: spin 2s linear infinite; }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    @media (orientation: portrait) {
-      #portrait-overlay { display: flex; }
-      #game-container { display: none; }
-    }
   </style>
 </head>
 <body>
-  <div id="portrait-overlay">
-    <!-- Rotating phone icon -->
-    <svg viewBox="0 0 24 24" fill="none" stroke="#f0c040" stroke-width="1.5">
-      <rect x="7" y="2" width="10" height="20" rx="2"/>
-      <path d="M12 18h.01"/>
-      <path d="M17 7l3-3m0 0l-3-3m3 3H14" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <p style="font-size:18px; font-weight:bold;">Rotate your device</p>
-    <p style="font-size:13px; color:#aaaaaa;">Texas Hedge'Em is best played in landscape</p>
-  </div>
   <div id="game-container"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>

@@ -9,11 +9,11 @@ import { test, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 
-// Game canvas design resolution
+// Game canvas design resolution (Scale.FIT — coordinate space stays 1024×640)
 const GAME_W = 1024;
 const GAME_H = 640;
 
-/** Convert game coordinates to Playwright page coordinates given the canvas bounding box */
+/** Convert 1024×640 game coordinates to Playwright page coordinates given the canvas bounding box */
 function gameToPage(box: { x: number; y: number; width: number; height: number }, gx: number, gy: number) {
   return {
     x: box.x + (gx / GAME_W) * box.width,
