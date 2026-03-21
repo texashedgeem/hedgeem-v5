@@ -34,7 +34,8 @@ async function clickAdvanceButton(page: import('@playwright/test').Page) {
   const canvas = page.locator('canvas');
   const box = await canvas.boundingBox();
   if (!box) throw new Error('Canvas not found');
-  const { x, y } = gameToPage(box, 874, 290);
+  // Advance button shares position with deal button (965,440) — no visual jump on swap
+  const { x, y } = gameToPage(box, 965, 440);
   await page.mouse.click(x, y);
 }
 

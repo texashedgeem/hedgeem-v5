@@ -252,11 +252,12 @@ export class GameScene extends Phaser.Scene {
         .setDepth(1);
     }
 
-    // Deal and Advance button positions differ by orientation.
+    // Deal and Advance buttons share the same position — they are never both visible,
+    // so co-locating them avoids the visual "jump" when one swaps for the other.
     // Landscape: JS client mobile theme buttons.js — deal: x=965, y=440.
-    // Portrait: estimated bottom area within 640×1024 canvas.
+    // Portrait: bottom-right within 640×1024 canvas.
     const dealBtnPos    = this.isPortrait ? { x: 560, y: 940 } : { x: 965, y: 440 };
-    const advanceBtnPos = this.isPortrait ? { x: 400, y: 940 } : { x: 874, y: 290 };
+    const advanceBtnPos = dealBtnPos;
 
     // Deal button — frame 0 of spritesheet (256×256 = 2×2 grid of 128×128 frames)
     this.dealBtn = this.add.sprite(dealBtnPos.x, dealBtnPos.y, 'dealbutton', 0)
