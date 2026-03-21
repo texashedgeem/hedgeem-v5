@@ -153,8 +153,7 @@ export class GameScene extends Phaser.Scene {
     // Detect orientation and select layout. The canvas base resolution was already
     // set by main.ts (1024×640 landscape OR 640×1024 portrait) before Phaser booted,
     // and is updated by _checkOrientation on subsequent rotations.
-    // Use screen.width/height (physical dimensions) not inner* (affected by browser chrome on mobile).
-    this.isPortrait = window.screen.height > window.screen.width;
+    this.isPortrait = window.innerHeight > window.innerWidth;
     this._applyLayout(this.isPortrait);
     this._buildUI();
 
@@ -184,7 +183,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Called on every window resize; rebuilds the scene if orientation flipped. */
   private _checkOrientation(): void {
-    const nowPortrait = window.screen.height > window.screen.width;
+    const nowPortrait = window.innerHeight > window.innerWidth;
     if (nowPortrait !== this.isPortrait) {
       // Resize the Phaser canvas BEFORE restarting so main.ts initial detect aligns.
       this._applyLayout(nowPortrait);
