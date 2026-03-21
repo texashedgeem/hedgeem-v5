@@ -11,7 +11,8 @@ import { PreloadScene } from './scenes/PreloadScene';
 import { GameScene } from './scenes/GameScene';
 
 // Initial canvas size — GameScene reconfigures this on orientation change.
-const isPortrait = window.innerHeight > window.innerWidth;
+// Use screen.width/height (physical) not inner* (affected by mobile browser chrome).
+const isPortrait = window.screen.height > window.screen.width;
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,

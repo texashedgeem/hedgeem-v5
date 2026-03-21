@@ -16,8 +16,9 @@ export class PreloadScene extends Phaser.Scene {
     // Card spritesheet: 980×768, 98×128 per frame, 10 cols × 6 rows = 60 frames (52 cards + back at 52)
     // cards_orange.png = default brand (BRAND="" in JS client, live at hedgeem.qeetoto.com)
     this.load.spritesheet('cards', 'cards_orange.png', { frameWidth: 98, frameHeight: 128 });
-    // Landscape table (1385×1385): 3-handed HedgeEm blue variant
-    this.load.image('table', 'tablel_hedgeem_blue_three_hand.png');
+    // Landscape table (1385×1385): standard HedgeEm blue — matches JS client (tablel_hedgeem_blue.png).
+    // JS client uses this same image regardless of hand count; N-handed mode just renders N of the 4 pockets.
+    this.load.image('table', 'tablel_hedgeem_blue.png');
     // Portrait table (1385×1385): same brand, portrait-orientation oval table
     this.load.image('tablep', 'tablep_hedgeem_blue.png');
     // dealbutton.png is a 256×256 spritesheet: 2×2 grid of 128×128 frames (normal/hover/pressed/dim)

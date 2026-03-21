@@ -25,7 +25,8 @@ async function clickDealButton(page: import('@playwright/test').Page) {
   const canvas = page.locator('canvas');
   const box = await canvas.boundingBox();
   if (!box) throw new Error('Canvas not found');
-  const { x, y } = gameToPage(box, 960, 520);
+  // Deal button: JS client mobile theme buttons.js x=965, y=440 on 1024×640 canvas
+  const { x, y } = gameToPage(box, 965, 440);
   await page.mouse.click(x, y);
 }
 

@@ -27,8 +27,11 @@ const INITIAL_CREDITS = 10_000;
 // flat and as wide as hole cards if given the same size — using desktop sizes as interim fix.
 const CARD_W = 107;   // hole: 71 × 1.5
 const CARD_H = 150;   // hole: 100 × 1.5
-const COMM_W = 67;    // community: desktop width (designed for these positions)
-const COMM_H = 83;    // community: desktop height
+// Community cards are displayed smaller than hole cards to approximate table depth.
+// Without skewX perspective (HEDGE-73), the "correct" mobile theme size (107×125) looks flat/fat.
+// 67×83 (desktop theme) is used as an interim size pending HEDGE-73 implementation.
+const COMM_W = 67;
+const COMM_H = 83;
 
 // Tint values matching the original JS client
 const TINT_LIVE = 0xffffff;
@@ -56,12 +59,12 @@ const L_CARD_POSITIONS = [
   // Hand 4 (hidden in 3-handed mode)
   { x: 780, y: 384, angle: -8 },   // imgCard[6]
   { x: 830, y: 376, angle: -8 },   // imgCard[7]
-  // Community cards — mobile theme y=136
-  { x: 270, y: 136, angle: 0 },    // imgCard[8]  flop 1
-  { x: 375, y: 136, angle: 0 },    // imgCard[9]  flop 2
-  { x: 475, y: 136, angle: 0 },    // imgCard[10] flop 3
-  { x: 624, y: 136, angle: 0 },    // imgCard[11] turn
-  { x: 780, y: 136, angle: 0 },    // imgCard[12] river
+  // Community cards — y=120 aligns cards with felt outline on tablel_hedgeem_blue.png
+  { x: 270, y: 120, angle: 0 },    // imgCard[8]  flop 1
+  { x: 375, y: 120, angle: 0 },    // imgCard[9]  flop 2
+  { x: 475, y: 120, angle: 0 },    // imgCard[10] flop 3
+  { x: 624, y: 120, angle: 0 },    // imgCard[11] turn
+  { x: 780, y: 120, angle: 0 },    // imgCard[12] river
 ];
 const L_HAND_POSITIONS = [
   { x: 225, y: 380 }, // hand 1
@@ -150,7 +153,8 @@ export class GameScene extends Phaser.Scene {
     // Detect orientation and select layout. The canvas base resolution was already
     // set by main.ts (1024×640 landscape OR 640×1024 portrait) before Phaser booted,
     // and is updated by _checkOrientation on subsequent rotations.
-    this.isPortrait = window.innerHeight > window.innerWidth;
+    // Use screen.width/height (physical dimensions) not inner* (affected by browser chrome on mobile).
+    this.isPortrait = window.screen.height > window.screen.width;
     this._applyLayout(this.isPortrait);
     this._buildUI();
 
@@ -180,7 +184,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Called on every window resize; rebuilds the scene if orientation flipped. */
   private _checkOrientation(): void {
-    const nowPortrait = window.innerHeight > window.innerWidth;
+    const nowPortrait = window.screen.height > window.screen.width;
     if (nowPortrait !== this.isPortrait) {
       // Resize the Phaser canvas BEFORE restarting so main.ts initial detect aligns.
       this._applyLayout(nowPortrait);
@@ -196,9 +200,12 @@ export class GameScene extends Phaser.Scene {
   private _buildUI(): void {
     const { width, height } = this.scale;
 
-    // Table background — landscape or portrait variant, centred on the design canvas
+    // Table background — landscape or portrait variant.
+    // Landscape: centred at (512, 320) — canvas centre, matches JS client tablePosition.
+    // Portrait: centred at (320, 400) — matches JS client tablePosition (NOT canvas centre 512).
     const tableKey = this.isPortrait ? 'tablep' : 'table';
-    this.add.image(width / 2, height / 2, tableKey);
+    const tableY = this.isPortrait ? 400 : height / 2;
+    this.add.image(width / 2, tableY, tableKey);
 
     // Hand panel images — positions from current layout (landscape or portrait)
     for (let i = 0; i < NUMBER_OF_HANDS; i++) {
@@ -247,9 +254,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Deal and Advance button positions differ by orientation.
-    // Landscape: right side, matching JS client (x=960, y=520 on 1024×640).
-    // Portrait: bottom-right, within the 640-wide canvas.
-    const dealBtnPos    = this.isPortrait ? { x: 560, y: 940 } : { x: 960, y: 520 };
+    // Landscape: JS client mobile theme buttons.js — deal: x=965, y=440.
+    // Portrait: estimated bottom area within 640×1024 canvas.
+    const dealBtnPos    = this.isPortrait ? { x: 560, y: 940 } : { x: 965, y: 440 };
     const advanceBtnPos = this.isPortrait ? { x: 400, y: 940 } : { x: 874, y: 290 };
 
     // Deal button — frame 0 of spritesheet (256×256 = 2×2 grid of 128×128 frames)
