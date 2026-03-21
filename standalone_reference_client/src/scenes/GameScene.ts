@@ -111,9 +111,13 @@ export class GameScene extends Phaser.Scene {
   private _buildUI(): void {
     const { width, height } = this.scale;
 
-    // Table background: 1384×1385 image centred at (512,320) — larger than canvas so it crops,
-    // matching how the JS client renders tablel_hedgeem_blue.png (no scaling, anchor 0.5).
-    this.add.image(512, 320, 'table');
+    // Table background: 1384×1385 image centred at canvas midpoint.
+    // With Scale.EXPAND the canvas may be wider/taller than 1024×640 so we use
+    // width/2, height/2 rather than hardcoded 512,320 to keep it centred.
+    const table = this.add.image(width / 2, height / 2, 'table');
+    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+      table.setPosition(gameSize.width / 2, gameSize.height / 2);
+    });
 
     // Hand panel images — exact felt positions from JS client handPosition landscape
     for (let i = 0; i < NUMBER_OF_HANDS; i++) {

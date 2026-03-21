@@ -18,7 +18,9 @@ const config: Phaser.Types.Core.GameConfig = {
   parent: 'game-container',
   scene: [BootScene, PreloadScene, GameScene],
   scale: {
-    mode: Phaser.Scale.FIT,
+    // EXPAND: canvas fills the viewport without black bars, revealing more table artwork.
+    // The 1024×640 coordinate space remains; Phaser expands the visible area to fill.
+    mode: Phaser.Scale.EXPAND,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
 };
