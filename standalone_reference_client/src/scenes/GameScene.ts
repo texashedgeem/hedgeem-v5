@@ -27,10 +27,12 @@ const INITIAL_CREDITS = 10_000;
 // flat and as wide as hole cards if given the same size — using desktop sizes as interim fix.
 const CARD_W = 107;   // hole: 71 × 1.5
 const CARD_H = 150;   // hole: 100 × 1.5
-// Community cards — larger than desktop theme (67×83) but smaller than hole cards.
-// Pending skewX perspective (HEDGE-73); interim size to fill felt outline at top of table.
-const COMM_W = 90;
-const COMM_H = 112;
+// Community cards — JS client: 71×100 × CARD_SCALE_FACTOR(1.5) × COMMUNITY_CARDS_3D_PERSPECTIVE_SCALING_REDUCTION(0.845)
+const COMM_W = 90;   // 71 × 1.5 × 0.845 ≈ 90
+const COMM_H = 127;  // 100 × 1.5 × 0.845 ≈ 127
+// skewX per community card (flop1→river): from JS client hands.js cardPosition.card9→card13
+// Injected into getLocalTransformMatrix — see card creation loop in _buildUI.
+const COMM_SKEW_X = [0.09, 0.03, 0, -0.04, -0.09];
 
 // Tint values matching the original JS client
 const TINT_LIVE = 0xffffff;
@@ -39,7 +41,6 @@ const TINT_DEAD = 0x7f7f7f;
 // ----------------------------------------------------------------
 // Layout tables — mobile theme from HedgeEmJavaScriptClient/odobo/src/js/hands.js
 // Landscape: 1024×640 design space. Portrait: 640×1024 design space.
-// SkewX (3D perspective) not applied here — tracked in HEDGE-73.
 // ----------------------------------------------------------------
 
 // LANDSCAPE (1024×640)
@@ -238,17 +239,48 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(3).setVisible(false);
     }
 
-    // 13 card sprites: cards 0-7 = hole cards (2 per hand), 8-12 = community
-    // Community cards use same width but shorter height (83 units vs 100 units, ×1.5 scale)
+    // 13 card sprites: cards 0-7 = hole cards (2 per hand), 8-12 = community.
+    // Community cards (8-12) have skewX applied via getLocalTransformMatrix override
+    // to simulate the 3D perspective of the back of the table (HEDGE-73).
     for (let c = 0; c < 13; c++) {
       const pos = this.cardPositions[c];
       const w = c >= 8 ? COMM_W : CARD_W;
       const h = c >= 8 ? COMM_H : CARD_H;
-      this.imgCard[c] = this.add.sprite(pos.x, pos.y, 'cards', 52)
+      const card = this.add.sprite(pos.x, pos.y, 'cards', 52)
         .setDisplaySize(w, h)
         .setAngle(pos.angle)
         .setVisible(false)
         .setDepth(1);
+      // Apply skewX to community cards (HEDGE-73).
+      // Phaser 3.90 batchSprite calls _tempMatrix2.applyITRS() directly — it never calls
+      // getLocalTransformMatrix on the game object. To inject skewX we override renderWebGL
+      // on the instance and temporarily patch _tempMatrix2.applyITRS before batchSprite runs.
+      // Sign convention matches Phaser 2 / PIXI: c = -sin(skewX)*scaleY ≈ -skewX * d.
+      if (c >= 8) {
+        const skewX = COMM_SKEW_X[c - 8];
+        if (skewX !== 0) {
+          (card as any).renderWebGL = function (
+            this: Phaser.GameObjects.Sprite,
+            _renderer: Phaser.Renderer.WebGL.WebGLRenderer,
+            src: Phaser.GameObjects.Sprite,
+            camera: Phaser.Cameras.Scene2D.Camera,
+            parentMatrix: Phaser.GameObjects.Components.TransformMatrix,
+          ) {
+            camera.addToRenderList(src);
+            const pipeline = (this as any).pipeline as any;
+            const mat = pipeline._tempMatrix2;
+            const orig = mat.applyITRS.bind(mat);
+            mat.applyITRS = function (x: number, y: number, r: number, sx: number, sy: number) {
+              orig(x, y, r, sx, sy);
+              this.c -= skewX * this.d; // Phaser 2 style: c = sin(-skewX)*scaleY ≈ -skewX*d
+              return this;
+            };
+            pipeline.batchSprite(src, camera, parentMatrix);
+            mat.applyITRS = orig;
+          };
+        }
+      }
+      this.imgCard[c] = card;
     }
 
     // Deal and Advance buttons share the same position — they are never both visible,
