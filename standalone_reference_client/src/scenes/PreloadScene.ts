@@ -34,6 +34,16 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('chips', 'chips.png');
     // Bitmap font used by JS client for odds multiplier display
     this.load.bitmapFont('handfont', 'handfont.png', 'handfont.xml');
+    // Chip denomination selector buttons: 900×90 spritesheets, 10 frames × 90×90
+    for (let i = 1; i <= 6; i++) {
+      this.load.spritesheet(`chip${i}`, `chip${i}.png`, { frameWidth: 90, frameHeight: 90 });
+    }
+    // Bet chip stack display: 540×90, 6 frames × 90×90 (one per denomination)
+    this.load.spritesheet('betchips', 'betchips.png', { frameWidth: 90, frameHeight: 90 });
+    // Cancel button: 256×256 = 2×2 grid of 128×128 frames (same format as dealbutton)
+    this.load.spritesheet('cancelbutton', 'cancelbutton.png', { frameWidth: 128, frameHeight: 128 });
+    // Chip glow highlight (plain image, positioned under active denomination chip)
+    this.load.image('chipglow', 'chipglow.png');
   }
 
   create(): void {

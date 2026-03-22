@@ -38,6 +38,10 @@ const COMM_SKEW_X = [0.09, 0.03, 0, -0.04, -0.09];
 const TINT_LIVE = 0xffffff;
 const TINT_DEAD = 0x7f7f7f;
 
+// Chip denominations in pence — matches JS client: chipValues = [25, 50, 100, 250, 500, 1000]
+const CHIP_DENOMINATIONS = [25, 50, 100, 250, 500, 1000];
+const DEFAULT_DENOMINATION = 2; // index 2 = 100p = £1.00
+
 // ----------------------------------------------------------------
 // Layout tables — mobile theme from HedgeEmJavaScriptClient/odobo/src/js/hands.js
 // Landscape: 1024×640 design space. Portrait: 640×1024 design space.
@@ -126,6 +130,14 @@ export class GameScene extends Phaser.Scene {
   private dealBtn!: Phaser.GameObjects.Sprite;
   private advanceBtn!: Phaser.GameObjects.Sprite;
 
+  // Betting UI
+  private activeDenomination: number = DEFAULT_DENOMINATION;
+  private chipBtns: Phaser.GameObjects.Sprite[] = [];
+  private chipGlow!: Phaser.GameObjects.Image;
+  private betChipStacks: Phaser.GameObjects.Sprite[] = [];  // one per hand
+  private cancelBtns: Phaser.GameObjects.Sprite[] = [];     // one per hand
+  private betAmountTexts: Phaser.GameObjects.Text[] = [];   // one per hand
+
   // Text overlays
   // oddsTexts: BitmapText using handfont (matches JS client). Handles odds numbers only (x2.1 etc.).
   // winTexts: regular Text for WIN label — handfont lacks W/I/N so cannot use BitmapText for this.
@@ -209,7 +221,11 @@ export class GameScene extends Phaser.Scene {
     // Hand panel images — positions from current layout (landscape or portrait)
     for (let i = 0; i < NUMBER_OF_HANDS; i++) {
       const { x, y } = this.handPositions[i];
-      this.imgHand[i] = this.add.image(x, y, `hand${i + 1}`).setVisible(false);
+      const handIdx = i;
+      this.imgHand[i] = this.add.image(x, y, `hand${i + 1}`)
+        .setVisible(false)
+        .setInteractive({ useHandCursor: true });
+      this.imgHand[i].on('pointerdown', () => this._onPlaceBet(handIdx));
 
       // Dead hand skull overlay — same position as hand panel
       this.imgDeadHand[i] = this.add.image(x, y, 'deadhand')
@@ -311,6 +327,68 @@ export class GameScene extends Phaser.Scene {
     this.advanceBtn.on('pointerover', () => this.advanceBtn.setTint(0x80ff80));
     this.advanceBtn.on('pointerout',  () => this.advanceBtn.setTint(0x40c040));
 
+    // ----------------------------------------------------------------
+    // Betting UI — chip denomination selector + per-hand chip stack + cancel
+    // ----------------------------------------------------------------
+
+    // Chip denomination buttons — landscape: mobile theme positions from buttons.js
+    // x = 100 * chip + 262, y = 530. Portrait: centred in 640×1024 bottom area.
+    const chipY = this.isPortrait ? 820 : 530;
+    const chipStartX = this.isPortrait ? 320 - 250 : 262;
+    const chipSpacing = this.isPortrait ? 100 : 100;
+
+    // Chip glow — sits under the active denomination chip (same size as chip buttons)
+    this.chipGlow = this.add.image(0, 0, 'chipglow').setDisplaySize(90, 90).setDepth(3).setVisible(false);
+
+    for (let d = 0; d < 6; d++) {
+      const cx = chipStartX + d * chipSpacing;
+      const chip = this.add.sprite(cx, chipY, `chip${d + 1}`, 0)
+        .setDisplaySize(72, 72)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(4)
+        .setVisible(false);
+      chip.on('pointerdown', () => this._onSelectDenomination(d));
+      chip.on('pointerover', () => chip.setTint(0xddddff));
+      chip.on('pointerout',  () => chip.clearTint());
+      this.chipBtns.push(chip);
+    }
+
+    // Per-hand: chip stack image + cancel button + bet amount text
+    const betTextStyle = { fontSize: '14px', color: '#ffff00', fontFamily: 'Arial Black, sans-serif',
+      stroke: '#000000', strokeThickness: 3 };
+
+    for (let i = 0; i < NUMBER_OF_HANDS; i++) {
+      const { x, y } = this.handPositions[i];
+
+      // Chip stack: betchips spritesheet, frame = denomination index
+      const stack = this.add.sprite(x, y, 'betchips', DEFAULT_DENOMINATION)
+        .setDisplaySize(60, 60)
+        .setDepth(3)
+        .setVisible(false);
+      this.betChipStacks.push(stack);
+
+      // Bet amount text below chip stack
+      const betText = this.add.text(x, y + 36, '', betTextStyle)
+        .setOrigin(0.5)
+        .setDepth(4)
+        .setVisible(false);
+      this.betAmountTexts.push(betText);
+
+      // Cancel button — top-right corner of hand panel
+      const cancelX = x + 50;
+      const cancelY = y - 55;
+      const cancel = this.add.sprite(cancelX, cancelY, 'cancelbutton', 0)
+        .setDisplaySize(44, 44)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(5)
+        .setVisible(false);
+      const handIdx = i;
+      cancel.on('pointerdown', () => this._onCancelBet(handIdx));
+      cancel.on('pointerover', () => cancel.setTint(0xffaaaa));
+      cancel.on('pointerout',  () => cancel.clearTint());
+      this.cancelBtns.push(cancel);
+    }
+
     // Bottom bar — Credits / Total Bet / Win (large, £x.xx format)
     const barY = height - 18;
     const labelStyle = { fontSize: '11px', color: '#aaaaaa', fontFamily: 'monospace' };
@@ -340,10 +418,37 @@ export class GameScene extends Phaser.Scene {
   // Player actions
   // ----------------------------------------------------------------
 
+  private _onSelectDenomination(index: number): void {
+    this.activeDenomination = index;
+    this._updateChipGlow();
+  }
+
+  private _onPlaceBet(handIndex: number): void {
+    const amount = CHIP_DENOMINATIONS[this.activeDenomination];
+    this.engine.placeBet(handIndex, amount);
+    this._render();
+  }
+
+  private _onCancelBet(handIndex: number): void {
+    this.engine.cancelBet(handIndex);
+    this._render();
+  }
+
+  private _updateChipGlow(): void {
+    if (this.chipBtns.length === 0) return;
+    const active = this.chipBtns[this.activeDenomination];
+    if (active && active.visible) {
+      this.chipGlow.setPosition(active.x, active.y).setVisible(true);
+    } else {
+      this.chipGlow.setVisible(false);
+    }
+  }
+
   private async _onDeal(): Promise<void> {
     this.dealBtn.setVisible(false);
     this.advanceBtn.setVisible(false);
     this.statusText.setText('Dealing…');
+    this.activeDenomination = DEFAULT_DENOMINATION;
 
     // Always use local coredata — API data source disabled until HEDGE-83 config option lands.
     this.engine.loadLocalGame();
@@ -386,7 +491,8 @@ export class GameScene extends Phaser.Scene {
 
     this._renderCards(snap.dealStatus);
     this._renderHandPanels(snap);
-    this._renderCredits();
+    this._renderBettingUI(snap);
+    this._renderCredits(snap);
   }
 
   private _renderCards(dealStatus: number): void {
@@ -486,11 +592,45 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private _renderCredits(): void {
-    this.creditsText.setText(this._pence(this.engine.getCredits()));
-    // Total Bet and Win will be populated once HEDGE-50 betting is implemented
-    this.totalBetText.setText(this._pence(0));
-    this.winText.setText(this._pence(0));
+  private _renderBettingUI(snap: ReturnType<GameEngine['snapshot']>): void {
+    const bettingOpen = snap.dealStatus >= 0 && snap.dealStatus <= 2; // hole, flop, turn
+
+    // Chip denomination selector — visible only when betting is open
+    for (let d = 0; d < 6; d++) {
+      this.chipBtns[d].setVisible(bettingOpen);
+    }
+    this.chipGlow.setVisible(bettingOpen);
+    if (bettingOpen) this._updateChipGlow();
+
+    // Per-hand chip stack, cancel button, and bet amount text
+    for (let i = 0; i < NUMBER_OF_HANDS; i++) {
+      const handBet = snap.handBets[i] ?? 0;
+      const hasBet = handBet > 0;
+      const dead = this.engine.isHandDead(i);
+
+      // Chip stack: show when hand has a bet, use denomination frame closest to bet
+      this.betChipStacks[i].setVisible(hasBet);
+      if (hasBet) {
+        // Pick betchips frame matching the highest denomination that fits the bet
+        let frame = 0;
+        for (let d = 5; d >= 0; d--) {
+          if (handBet >= CHIP_DENOMINATIONS[d]) { frame = d; break; }
+        }
+        this.betChipStacks[i].setFrame(frame);
+      }
+
+      // Bet amount text
+      this.betAmountTexts[i].setVisible(hasBet).setText(hasBet ? this._pence(handBet) : '');
+
+      // Cancel button: visible when betting is open AND hand has a bet AND hand not dead
+      this.cancelBtns[i].setVisible(bettingOpen && hasBet && !dead);
+    }
+  }
+
+  private _renderCredits(snap: ReturnType<GameEngine['snapshot']>): void {
+    this.creditsText.setText(this._pence(snap.credits));
+    this.totalBetText.setText(this._pence(snap.totalBet));
+    this.winText.setText(this._pence(snap.winAmount));
   }
 
   /** Format pence value as £x.xx */

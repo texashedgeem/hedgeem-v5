@@ -73,6 +73,9 @@ export interface GameSnapshot {
   cardData: CardData;
   handStageInfo: HandStageInfo[];  // for current dealStatus only
   bets: Bet[];
+  handBets: number[];              // total bet per hand (pence) — for chip stack display
+  totalBet: number;                // sum of all hand bets (pence)
+  winAmount: number;               // payout accumulated at river (pence)
   credits: number;
   gameOver: boolean;
   isLiveData: boolean;             // true = data came from API, false = local coredata

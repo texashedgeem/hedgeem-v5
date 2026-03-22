@@ -79,6 +79,7 @@ export class GameEngine {
   private dealStatus: number = -1;     // -1 = not started; 0=hole,1=flop,2=turn,3=river
   private bets: Bet[] = [];
   private credits: number;
+  private winAmount: number = 0;
   private lastDataIndex: number = -1;
   private numberOfHands: number;
   private isLiveData: boolean = false;
@@ -125,6 +126,7 @@ export class GameEngine {
     this.cardData = decodeCardData(this.record);
     this.dealStatus = -1;
     this.bets = [];
+    this.winAmount = 0;
   }
 
   // ----------------------------------------------------------------
@@ -221,6 +223,10 @@ export class GameEngine {
   // Ported from the bet placement logic in buttons.js / amounts.js
   // ----------------------------------------------------------------
 
+  /**
+   * Places a bet on a hand. Betting is only allowed at hole stage (dealStatus=0).
+   * Returns false if bet cannot be placed (wrong stage, insufficient credits, dead hand).
+   */
   placeBet(handIndex: number, stakeAmount: number): boolean {
     if (this.dealStatus < 0 || this.dealStatus > 2) return false;
     if (stakeAmount > this.credits) return false;
@@ -228,13 +234,30 @@ export class GameEngine {
 
     const odds = this.getHandOdds(handIndex);
     this.credits -= stakeAmount;
-    this.bets.push({
-      stage: this.dealStatus,
-      handIndex,
-      stakeAmount,
-      oddsAtBet: odds,
-    });
+    this.bets.push({ stage: 0, handIndex, stakeAmount, oddsAtBet: odds });
     return true;
+  }
+
+  /**
+   * Cancels all bets on a hand, refunding credits. Only allowed at hole stage.
+   */
+  cancelBet(handIndex: number): boolean {
+    if (this.dealStatus < 0 || this.dealStatus > 2) return false;
+    const refund = this.getHandBet(handIndex);
+    if (refund === 0) return false;
+    this.bets = this.bets.filter(b => b.handIndex !== handIndex);
+    this.credits += refund;
+    return true;
+  }
+
+  /** Total bet amount (pence) placed on a specific hand. */
+  getHandBet(handIndex: number): number {
+    return this.bets.filter(b => b.handIndex === handIndex).reduce((s, b) => s + b.stakeAmount, 0);
+  }
+
+  /** Total bet amount (pence) across all hands. */
+  getTotalBet(): number {
+    return this.bets.reduce((s, b) => s + b.stakeAmount, 0);
   }
 
   /**
@@ -245,11 +268,16 @@ export class GameEngine {
     let totalPayout = 0;
     for (const bet of this.bets) {
       if (this.isHandWinner(bet.handIndex)) {
-        totalPayout += bet.stakeAmount * bet.oddsAtBet;
+        totalPayout += Math.round(bet.stakeAmount * bet.oddsAtBet);
       }
     }
     this.credits += totalPayout;
+    this.winAmount = totalPayout;
     return totalPayout;
+  }
+
+  getWinAmount(): number {
+    return this.winAmount;
   }
 
   getBets(): Bet[] {
@@ -261,12 +289,16 @@ export class GameEngine {
   // ----------------------------------------------------------------
 
   snapshot(): GameSnapshot {
+    const n = this.record?.numberOfHands ?? this.numberOfHands;
     return {
       dealStatus: this.dealStatus,
-      numberOfHands: this.record?.numberOfHands ?? this.numberOfHands,
+      numberOfHands: n,
       cardData: this.cardData ?? [],
       handStageInfo: this.getHandStageInfoForCurrentStatus(),
       bets: this.getBets(),
+      handBets: Array.from({ length: n }, (_, i) => this.getHandBet(i)),
+      totalBet: this.getTotalBet(),
+      winAmount: this.winAmount,
       credits: this.credits,
       gameOver: this.isGameOver,
       isLiveData: this.isLiveData,
