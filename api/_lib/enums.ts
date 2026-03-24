@@ -5,6 +5,7 @@ export enum BettingStage {
   HOLE = 0,
   FLOP = 1,
   TURN = 2,
+  RIVER = 3,  // Reveal stage — no betting, but odds/winners are pre-calculated in bulk data
 }
 
 export enum GameState {

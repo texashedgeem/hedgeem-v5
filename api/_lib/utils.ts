@@ -244,14 +244,66 @@ export function getBestFiveCards(cards: string | string[]): string[] {
 }
 
 // ============================================================
-// PRE-FLOP ODDS CALCULATOR
-// Uses pokersolver (CJS) — replaces the ESM-only poker-odds-calculator package.
-// Implements Monte Carlo simulation equivalent to HedgeEmUtility odds methods
-// and the UMA C++ math engine (exact combinatorial version tracked in HEDGE-43).
+// DEAL LOGIC
+// Ported from HedgeEmGame.f_assignHoleCards (hedgeem_server)
 //
-// For each iteration we randomly deal 5 community cards from the remaining deck
-// (cards not assigned as hole cards), evaluate each player's best 7-card hand,
-// and determine the winner(s). Ties are counted separately.
+// Deals a complete game from a fresh shuffled deck:
+//   - 2 hole cards per hand
+//   - 3 flop cards + 1 turn + 1 river board cards
+// ============================================================
+
+export interface DealtGame {
+  hands: string[];     // e.g. ['AcKd', 'QsJs', '8h7c'] — one 4-char string per hand
+  bc1: string;         // Flop card 1
+  bc2: string;         // Flop card 2
+  bc3: string;         // Flop card 3
+  bc4: string;         // Turn card
+  bc5: string;         // River card
+}
+
+/**
+ * Shuffles a fresh deck and deals a complete game: hole cards for each hand
+ * and all 5 board cards (flop + turn + river).
+ *
+ * Ported from HedgeEmGame.f_assignHoleCards() — deals 2 hole cards per hand
+ * sequentially from the top of the shuffled deck, then the next 5 cards become
+ * the board (3 flop + 1 turn + 1 river), matching the original C# dealing order.
+ *
+ * @param numberOfHands - Number of hands to deal (3 or 4)
+ */
+export function dealGame(numberOfHands: number): DealtGame {
+  const deck = shuffleDeck();
+
+  const hands: string[] = [];
+  for (let i = 0; i < numberOfHands; i++) {
+    hands.push(deck[i * 2] + deck[i * 2 + 1]);
+  }
+
+  // Board cards start immediately after the last hole card
+  const b = numberOfHands * 2;
+  return {
+    hands,
+    bc1: deck[b],
+    bc2: deck[b + 1],
+    bc3: deck[b + 2],
+    bc4: deck[b + 3],
+    bc5: deck[b + 4],
+  };
+}
+
+// ============================================================
+// ODDS CALCULATOR — ALL STAGES
+// Ported from HedgeEmGame odds pipeline (hedgeem_server).
+// Uses pokersolver (CJS) — replaces the ESM-only poker-odds-calculator package.
+//
+// For each stage we simulate the unknown community cards via Monte Carlo,
+// then compute the full odds chain (actual → margin → rounded) for display.
+//
+// Stage overview:
+//   HOLE  — 0 community cards known, simulate 5  (pre-flop)
+//   FLOP  — 3 community cards known, simulate 2  (turn + river)
+//   TURN  — 4 community cards known, simulate 1  (river)
+//   RIVER — 5 community cards known, deterministic evaluation (no simulation)
 // ============================================================
 
 export interface HandOddsResult {
@@ -260,54 +312,163 @@ export interface HandOddsResult {
 }
 
 /**
- * Calculates pre-flop win and draw percentages for a set of hole card pairs
- * using Monte Carlo simulation.
+ * Core Monte Carlo simulator used by all pre-river stage calculators.
+ * Evaluates each hand over `iterations` random completions of the board.
  *
- * @param hands - Array of 4-char hole card pair strings, e.g. ['AcKd', 'QsJs']
- * @param iterations - Number of Monte Carlo iterations (default 10,000)
- * @returns Per-hand win% and draw% (draw = split pot / tie)
+ * @param holeCards  - Parsed hole card pairs, e.g. [['Ac','Kd'], ['Qs','Js']]
+ * @param known      - Community cards already revealed (0–4 cards)
+ * @param simulate   - Number of additional community cards to simulate (5 - known.length)
+ * @param remaining  - Cards not yet in play (mutated in place for perf — pass a copy if needed)
+ * @param iterations - Monte Carlo iterations
  */
-export function calculatePreFlopOdds(hands: string[], iterations = 10_000): HandOddsResult[] {
-  // Split each 4-char hand string into two 2-char card strings
-  const holeCards: [string, string][] = hands.map(h => [h.slice(0, 2), h.slice(2, 4)]);
-
-  // Build the remaining deck: all 52 cards not dealt as hole cards
-  const dealtSet = new Set(holeCards.flat());
-  const remaining: string[] = FULL_DECK.filter(c => !dealtSet.has(c));
-
-  const wins = new Array<number>(hands.length).fill(0);
-  const ties = new Array<number>(hands.length).fill(0);
+function simulateOdds(
+  holeCards: [string, string][],
+  known: string[],
+  simulate: number,
+  remaining: string[],
+  iterations: number,
+): HandOddsResult[] {
+  const n = holeCards.length;
+  const wins = new Array<number>(n).fill(0);
+  const ties = new Array<number>(n).fill(0);
 
   for (let iter = 0; iter < iterations; iter++) {
-    // Randomly pick 5 community cards from the remaining deck
-    // (in-place partial Fisher-Yates to avoid allocating a new array each iteration)
-    for (let i = 0; i < 5; i++) {
+    // In-place partial Fisher-Yates: shuffle `simulate` cards to the front of `remaining`
+    for (let i = 0; i < simulate; i++) {
       const j = i + Math.floor(Math.random() * (remaining.length - i));
-      const tmp = remaining[i];
-      remaining[i] = remaining[j];
-      remaining[j] = tmp;
+      const tmp = remaining[i]; remaining[i] = remaining[j]; remaining[j] = tmp;
     }
-    const community = remaining.slice(0, 5);
+    const community = [...known, ...remaining.slice(0, simulate)];
 
-    // Evaluate each hand using pokersolver: best 5 from hole cards + 5 community cards
     const solved = holeCards.map(([c1, c2]) => PokerHand.solve([c1, c2, ...community]));
     const winners: any[] = PokerHand.winners(solved);
 
     if (winners.length === 1) {
-      // Single winner
-      const winIdx = solved.indexOf(winners[0]);
-      wins[winIdx]++;
+      wins[solved.indexOf(winners[0])]++;
     } else {
-      // Tie — all winners share the pot
-      winners.forEach((w: any) => {
-        const idx = solved.indexOf(w);
-        ties[idx]++;
-      });
+      winners.forEach((w: any) => ties[solved.indexOf(w)]++);
     }
   }
 
-  return hands.map((_, i) => ({
+  return holeCards.map((_, i) => ({
     winPercentage: parseFloat(((wins[i] / iterations) * 100).toFixed(1)),
     drawPercentage: parseFloat(((ties[i] / iterations) * 100).toFixed(1)),
   }));
+}
+
+/** Builds the set of cards not in play given hole cards and known community cards. */
+function buildRemaining(holeCards: [string, string][], known: string[]): string[] {
+  const used = new Set([...holeCards.flat(), ...known]);
+  return FULL_DECK.filter(c => !used.has(c));
+}
+
+/**
+ * Pre-flop odds (HOLE stage): all 5 community cards unknown, simulate all 5.
+ *
+ * @param hands      - Array of 4-char hole card pair strings, e.g. ['AcKd', 'QsJs']
+ * @param iterations - Monte Carlo iterations (default 10,000)
+ */
+export function calculatePreFlopOdds(hands: string[], iterations = 10_000): HandOddsResult[] {
+  const holeCards: [string, string][] = hands.map(h => [h.slice(0, 2), h.slice(2, 4)]);
+  const remaining = buildRemaining(holeCards, []);
+  return simulateOdds(holeCards, [], 5, remaining, iterations);
+}
+
+/**
+ * Flop odds (FLOP stage): 3 community cards known, simulate turn + river.
+ *
+ * @param hands      - Array of 4-char hole card pair strings
+ * @param flop       - 3 flop card strings, e.g. ['Ah', '7d', '2c']
+ * @param iterations - Monte Carlo iterations (default 10,000)
+ */
+export function calculateFlopOdds(hands: string[], flop: string[], iterations = 10_000): HandOddsResult[] {
+  const holeCards: [string, string][] = hands.map(h => [h.slice(0, 2), h.slice(2, 4)]);
+  const remaining = buildRemaining(holeCards, flop);
+  return simulateOdds(holeCards, flop, 2, remaining, iterations);
+}
+
+/**
+ * Turn odds (TURN stage): 4 community cards known, simulate river only.
+ *
+ * @param hands      - Array of 4-char hole card pair strings
+ * @param flop       - 3 flop card strings
+ * @param turnCard   - Turn card string, e.g. 'Ks'
+ * @param iterations - Monte Carlo iterations (default 10,000)
+ */
+export function calculateTurnOdds(hands: string[], flop: string[], turnCard: string, iterations = 10_000): HandOddsResult[] {
+  const holeCards: [string, string][] = hands.map(h => [h.slice(0, 2), h.slice(2, 4)]);
+  const known = [...flop, turnCard];
+  const remaining = buildRemaining(holeCards, known);
+  return simulateOdds(holeCards, known, 1, remaining, iterations);
+}
+
+/**
+ * River odds (RIVER stage): all 5 community cards known — deterministic evaluation,
+ * no simulation needed.
+ *
+ * @param hands      - Array of 4-char hole card pair strings
+ * @param community  - All 5 community cards [bc1, bc2, bc3, bc4, bc5]
+ * @returns Per-hand results: winner gets winPercentage=100, tied hands get drawPercentage=100,
+ *          losers get 0/0.
+ */
+export function calculateRiverOdds(hands: string[], community: string[]): HandOddsResult[] {
+  const holeCards: [string, string][] = hands.map(h => [h.slice(0, 2), h.slice(2, 4)]);
+  const solved = holeCards.map(([c1, c2]) => PokerHand.solve([c1, c2, ...community]));
+  const winners: any[] = PokerHand.winners(solved);
+
+  return hands.map((_, i) => {
+    const isWinner = winners.includes(solved[i]);
+    const isTie = isWinner && winners.length > 1;
+    return {
+      winPercentage: isWinner && !isTie ? 100 : 0,
+      drawPercentage: isTie ? 100 : 0,
+    };
+  });
+}
+
+// ============================================================
+// HOUSE MARGIN / ODDS CHAIN
+// Ported from HedgeEmHandStageInfo odds properties (hedgeem_client_class_library).
+//
+// The full chain from raw probability → player-facing odds:
+//   percentWinOrDraw  →  oddsActual  →  oddsMargin  →  oddsRounded
+//                                 (× targetRtp)     (round to 1 d.p.)
+//
+// oddsActual  = 100 / percentWinOrDraw          (fair decimal odds)
+// oddsMargin  = oddsActual × targetRtp          (apply house edge)
+// oddsRounded = round(oddsMargin, 1 d.p.)       (displayed to player as "1:X")
+// actualRtp   = oddsRounded / oddsActual         (effective RTP for this bet)
+// roundingRake = (oddsMargin - oddsRounded) / oddsActual  (margin lost to rounding)
+// ============================================================
+
+export interface OddsChain {
+  oddsActual: number;
+  oddsMargin: number;
+  oddsRounded: number;
+  actualRtp: number;
+  roundingRake: number;
+}
+
+/**
+ * Computes the full odds chain from raw win/draw percentages and target RTP.
+ * Ported from HedgeEmHandStageInfo property calculations.
+ *
+ * @param percentWin  - Win probability 0–100
+ * @param percentDraw - Draw/tie probability 0–100
+ * @param targetRtp   - House RTP target, e.g. 0.97 for 97%
+ */
+export function computeOddsChain(percentWin: number, percentDraw: number, targetRtp: number): OddsChain {
+  const percentWinOrDraw = percentWin + percentDraw;
+
+  if (percentWinOrDraw === 0) {
+    return { oddsActual: 0, oddsMargin: 0, oddsRounded: 0, actualRtp: 0, roundingRake: 0 };
+  }
+
+  const oddsActual  = parseFloat((100 / percentWinOrDraw).toFixed(4));
+  const oddsMargin  = parseFloat((oddsActual * targetRtp).toFixed(4));
+  const oddsRounded = Math.round(oddsMargin * 10) / 10;
+  const actualRtp   = parseFloat((oddsRounded / oddsActual).toFixed(4));
+  const roundingRake = parseFloat(((oddsMargin - oddsRounded) / oddsActual).toFixed(4));
+
+  return { oddsActual, oddsMargin, oddsRounded, actualRtp, roundingRake };
 }
