@@ -859,9 +859,11 @@ components:
           example: 3
         targetRtp:
           type: number
-          description: House RTP target — must be > 0 and < 1 (default 0.97)
-          exclusiveMinimum: 0
-          exclusiveMaximum: 1
+          description: House RTP target — must be > 0 and < 1 exclusive (default 0.97)
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 1
+          exclusiveMaximum: true
           default: 0.97
           example: 0.97
 
