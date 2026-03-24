@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Texas Hedge'Em API
-  version: "0.1.0"
+  version: "0.3.0"
   description: |
     REST API for Texas Hedge'Em v5 — a player-vs-house poker odds game.
 
