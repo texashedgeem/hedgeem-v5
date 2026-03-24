@@ -57,6 +57,10 @@
     ]
   },
   "openapi": "openapi.yaml",
+  "api": {
+    "playground": { "mode": "show" },
+    "auth": { "method": "bearer" }
+  },
   "footer": {
     "socials": {
       "github": "https://github.com/texashedgeem/hedgeem-v5"
