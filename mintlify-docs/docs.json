@@ -36,7 +36,7 @@
           },
           {
             "group": "Game",
-            "pages": ["api-reference/deal"]
+            "pages": ["api-reference/deal", "api-reference/games/bulk"]
           },
           {
             "group": "Tables",
